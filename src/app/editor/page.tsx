@@ -12,10 +12,15 @@ import { VersionHistoryDialog } from "@/components/editor/dialogs/VersionHistory
 import { SaveBeforeChangeDialog } from "@/components/editor/dialogs/SaveBeforeChangeDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LoadingScreen } from "@/components/loading-screen";
 import { ArrowLeft, Eye, Upload, LayoutTemplate, History } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type EditorMode = "select-template" | "edit-single" | "edit-multi";
+
+// Guarantees the loading screen is visible for a bit even when the config
+// fetch resolves almost instantly, instead of flashing for a few ms.
+const MIN_LOADING_TIME_MS = 2000;
 
 type DialogState = {
   type:
@@ -47,6 +52,7 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchConfig = async () => {
+    const startedAt = Date.now();
     try {
       const response = await fetch("/api/landing-config");
       const data = await response.json();
@@ -73,7 +79,8 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error fetching config:", error);
     } finally {
-      setLoading(false);
+      const remaining = MIN_LOADING_TIME_MS - (Date.now() - startedAt);
+      setTimeout(() => setLoading(false), Math.max(0, remaining));
     }
   };
 
@@ -362,11 +369,7 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg">Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!config) {
@@ -390,7 +393,7 @@ export default function AdminDashboard() {
               </Button>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-xl font-bold">Landing Page Editor</h1>
+                <h1 className="text-xl font-bold">Editor</h1>
                 {draftPage && (
                   <p className="text-sm text-gray-500">
                     {draftPage.isMultiPage ? "Multi-Page" : "Single-Page"} • {draftPage.title}
