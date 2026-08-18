@@ -11,11 +11,12 @@ import { ExportImportDialog } from "@/components/editor/dialogs/ExportImportDial
 import { KeyboardShortcutsHelp } from "@/components/editor/panels/KeyboardShortcutsHelp";
 import { HiddenComponentsList } from "@/components/editor/panels/HiddenComponentsList";
 import { ChangeTemplateDialog } from "@/components/editor/dialogs/ChangeTemplateDialog";
+import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 import ThemeSelector from "@/components/editor/selectors/ThemeSelector";
 import CustomThemeCreator from "@/components/editor/selectors/CustomThemeCreator";
 import { EditModeProvider } from "@/contexts/EditModeContext";
 import { Button } from "@/components/ui/button";
-import { Save, Eye, Plus, Settings, Download, HelpCircle, Palette, Paintbrush } from "lucide-react";
+import { Save, Plus, Settings, Download, HelpCircle, Palette, Paintbrush } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useKeyboardShortcuts, COMMON_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
@@ -44,13 +45,20 @@ interface EditableLandingPageProps {
   theme?: Theme;
   config: LandingConfig;
   onSave: (page: LandingPage) => Promise<void>;
+  onSaveCustomTheme?: (theme: Theme, themeId: string) => Promise<void>;
 }
 
 /**
  * EditableLandingPage - Visual editor for landing pages
  * Wraps components in EditableBlock, shows ComponentEditor panel
  */
-export function EditableLandingPage({ page, theme, config, onSave }: EditableLandingPageProps) {
+export function EditableLandingPage({
+  page,
+  theme,
+  config,
+  onSave,
+  onSaveCustomTheme,
+}: EditableLandingPageProps) {
   const [editingPage, setEditingPage] = useState<LandingPage>(page);
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,7 +72,20 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
   const [componentToChangeTemplate, setComponentToChangeTemplate] =
     useState<ComponentConfig | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [componentEditorDirty, setComponentEditorDirty] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState<{ id: string | null } | null>(null);
   const { toast } = useToast();
+
+  // Switching the selected component resets ComponentEditor's local edits (it
+  // re-syncs from the newly selected component's config). If there are
+  // unsaved edits, confirm before discarding them instead of switching silently.
+  const requestSelectComponent = (id: string | null) => {
+    if (componentEditorDirty && id !== selectedComponentId) {
+      setPendingSelection({ id });
+    } else {
+      setSelectedComponentId(id);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -86,9 +107,9 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
 
   // Apply theme when page loads or theme changes
   useEffect(() => {
-    const currentTheme = getTheme(editingPage.theme || "modern");
+    const currentTheme = getTheme(editingPage.theme || "modern", config.themes);
     applyTheme(currentTheme);
-  }, [editingPage.theme]);
+  }, [editingPage.theme, config.themes]);
 
   // Sync header tabs when subpages change
   useEffect(() => {
@@ -155,7 +176,7 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
         key: "Escape",
         description: "Close panels",
         action: () => {
-          setSelectedComponentId(null);
+          requestSelectComponent(null);
           setTemplatesOpen(false);
           setSettingsOpen(false);
           setExportImportOpen(false);
@@ -628,7 +649,7 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
 
     setEditingPage(updatedPage);
 
-    const themeName = getTheme(themeId).name;
+    const themeName = getTheme(themeId, config.themes).name;
 
     toast({
       title: "🎨 Theme Changed",
@@ -638,16 +659,30 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
   };
 
   // Save custom theme
-  const handleSaveCustomTheme = (theme: Theme, themeId: string) => {
-    // In real app, save to config.themes
-    // For now, just apply it and notify
-    handleThemeChange(themeId);
+  const handleSaveCustomTheme = async (theme: Theme, themeId: string) => {
+    if (!onSaveCustomTheme) {
+      handleThemeChange(themeId);
+      return;
+    }
 
-    toast({
-      title: "✨ Custom Theme Created",
-      description: `"${theme.name}" has been created and applied!`,
-      duration: 3000,
-    });
+    try {
+      await onSaveCustomTheme(theme, themeId);
+      handleThemeChange(themeId);
+
+      toast({
+        title: "✨ Custom Theme Created",
+        description: `"${theme.name}" has been created and applied!`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error saving custom theme:", error);
+      toast({
+        title: "❌ Failed to Save Theme",
+        description: "Your custom theme could not be saved. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
   };
 
   // Move component up
@@ -919,7 +954,7 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
               <HiddenComponentsList
                 components={editingPage.components}
                 onToggleVisibility={handleToggleVisibility}
-                onSelectComponent={setSelectedComponentId}
+                onSelectComponent={requestSelectComponent}
               />
               <Button
                 variant="outline"
@@ -965,10 +1000,6 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
               >
                 <Settings className="h-4 w-4" />
                 Settings
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePreview} className="gap-1">
-                <Eye className="h-4 w-4" />
-                Preview
               </Button>
               <Button
                 variant="outline"
@@ -1025,7 +1056,7 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
                     <EditableBlock
                       component={component}
                       isSelected={selectedComponentId === component.id}
-                      onSelect={() => setSelectedComponentId(component.id)}
+                      onSelect={() => requestSelectComponent(component.id)}
                       onToggleVisibility={() => handleToggleVisibility(component.id)}
                       onDelete={() => handleDeleteComponent(component.id)}
                       onDuplicate={() => handleDuplicateComponent(component.id)}
@@ -1082,8 +1113,25 @@ export function EditableLandingPage({ page, theme, config, onSave }: EditableLan
             subPages={editingPage.subPages || []}
             pageSlug={editingPage.slug}
             isMultiPage={editingPage.isMultiPage}
+            onDirtyChange={setComponentEditorDirty}
           />
         )}
+
+        {/* Guard against silently discarding edits when switching components elsewhere */}
+        <ConfirmDialog
+          open={!!pendingSelection}
+          onOpenChange={(open) => !open && setPendingSelection(null)}
+          title="Discard unsaved changes?"
+          description="You have unsaved changes to the current component. Switching now will discard them."
+          confirmText="Discard"
+          variant="destructive"
+          onConfirm={() => {
+            if (pendingSelection) {
+              setSelectedComponentId(pendingSelection.id);
+            }
+            setPendingSelection(null);
+          }}
+        />
 
         {/* Component Templates Panel */}
         <ComponentTemplatesPanel

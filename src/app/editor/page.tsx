@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LandingConfig, LandingPage, LandingPageVersion } from "@/types/landing";
+import { LandingConfig, LandingPage, LandingPageVersion, Theme } from "@/types/landing";
 import { TemplateSelector } from "@/components/editor/selectors/TemplateSelector";
 import { LandingPageTemplate } from "@/lib/landing-templates";
 import { EditableLandingPage } from "@/components/editor/core/EditableLandingPage";
@@ -368,6 +368,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSaveCustomTheme = async (theme: Theme, themeId: string) => {
+    if (!config) return;
+
+    const updatedConfig = {
+      ...config,
+      themes: { ...config.themes, [themeId]: theme },
+    };
+
+    const response = await fetch("/api/landing-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedConfig),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save custom theme");
+    }
+
+    setConfig(updatedConfig);
+  };
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -405,7 +426,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               {draftPage && (
                 <>
-                  <Badge variant={publishedPage ? "default" : "secondary"}>
+                  {/* <Badge variant={publishedPage ? "default" : "secondary"}>
                     {publishedPage ? "Published" : "Draft"}
                   </Badge>
                   {activeVersionId && (
@@ -414,7 +435,7 @@ export default function AdminDashboard() {
                       {config?.currentLanding?.versions?.find((v) => v.id === activeVersionId)
                         ?.name || "Version"}
                     </Badge>
-                  )}
+                  )} */}
                   <Button
                     variant="outline"
                     size="sm"
@@ -499,11 +520,21 @@ export default function AdminDashboard() {
 
         {/* Show editor when template is selected */}
         {mode === "edit-single" && draftPage && config && (
-          <EditableLandingPage page={draftPage} config={config} onSave={handleSaveDraft} />
+          <EditableLandingPage
+            page={draftPage}
+            config={config}
+            onSave={handleSaveDraft}
+            onSaveCustomTheme={handleSaveCustomTheme}
+          />
         )}
 
         {mode === "edit-multi" && draftPage && config && (
-          <MultiPageEditor page={draftPage} config={config} onSave={handleSaveDraft} />
+          <MultiPageEditor
+            page={draftPage}
+            config={config}
+            onSave={handleSaveDraft}
+            onSaveCustomTheme={handleSaveCustomTheme}
+          />
         )}
 
         {/* Show template selector placeholder when no draft */}

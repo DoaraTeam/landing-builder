@@ -30,7 +30,6 @@ export default function CustomThemeCreator({
 }: CustomThemeCreatorProps) {
   // Default theme values
   const [themeName, setThemeName] = useState("My Custom Theme");
-  const [themeId, setThemeId] = useState("custom");
 
   // Colors
   const [primaryColor, setPrimaryColor] = useState("#3B82F6");
@@ -93,8 +92,10 @@ export default function CustomThemeCreator({
   };
 
   const handleSave = () => {
-    // Generate theme ID from name
-    const id = themeId || themeName.toLowerCase().replace(/\s+/g, "-");
+    // Slugify the name and append a timestamp so two themes with the same
+    // name (or repeated saves) never collide and silently overwrite each other.
+    const slug = themeName.toLowerCase().trim().replace(/\s+/g, "-") || "custom-theme";
+    const id = `${slug}-${Date.now()}`;
     onSaveTheme(currentTheme, id);
     onOpenChange(false);
   };

@@ -121,7 +121,7 @@ export default async function SubPage({ params }: PageProps) {
     }
 
     // Get theme
-    const theme = getTheme(publishedPage.theme || "modern");
+    const theme = getTheme(publishedPage.theme || "modern", config.themes);
 
     // Sort components by order and filter visible ones
     const sortedComponents = [...subPage.components]

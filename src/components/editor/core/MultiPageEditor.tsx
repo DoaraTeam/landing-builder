@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LandingPage, SubPage, LandingConfig } from "@/types/landing";
+import { LandingPage, SubPage, LandingConfig, Theme } from "@/types/landing";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,9 +21,15 @@ interface MultiPageEditorProps {
   page: LandingPage;
   config: LandingConfig;
   onSave: (page: LandingPage) => Promise<void>;
+  onSaveCustomTheme?: (theme: Theme, themeId: string) => Promise<void>;
 }
 
-export default function MultiPageEditor({ page, config, onSave }: MultiPageEditorProps) {
+export default function MultiPageEditor({
+  page,
+  config,
+  onSave,
+  onSaveCustomTheme,
+}: MultiPageEditorProps) {
   const [editingPage, setEditingPage] = useState<LandingPage>(page);
   const [activeTab, setActiveTab] = useState<"main" | "subpages" | "settings">("main");
   const [editingSubPageId, setEditingSubPageId] = useState<string | null>(null);
@@ -117,6 +123,7 @@ export default function MultiPageEditor({ page, config, onSave }: MultiPageEdito
               components: updatedSubPageData.components,
             });
           }}
+          onSaveCustomTheme={onSaveCustomTheme}
         />
       </div>
     );
@@ -153,7 +160,12 @@ export default function MultiPageEditor({ page, config, onSave }: MultiPageEdito
 
       {/* Content */}
       <TabsContent value="main" className="mt-0">
-        <EditableLandingPage page={editingPage} config={config} onSave={handleUpdateMainPage} />
+        <EditableLandingPage
+          page={editingPage}
+          config={config}
+          onSave={handleUpdateMainPage}
+          onSaveCustomTheme={onSaveCustomTheme}
+        />
       </TabsContent>
 
       <TabsContent value="subpages" className="mt-0">

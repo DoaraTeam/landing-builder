@@ -306,10 +306,11 @@ export const themes: Record<string, Theme> = {
 };
 
 /**
- * Get theme by ID
+ * Get theme by ID. Checks custom themes (e.g. from LandingConfig.themes) first,
+ * so a saved custom theme takes priority over a built-in theme of the same id.
  */
-export function getTheme(themeId: string): Theme {
-  return themes[themeId] || themes.modern;
+export function getTheme(themeId: string, customThemes?: Record<string, Theme>): Theme {
+  return customThemes?.[themeId] || themes[themeId] || themes.modern;
 }
 
 /**

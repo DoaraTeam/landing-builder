@@ -1,6 +1,6 @@
 "use client";
 
-import { LandingPage } from "@/types/landing";
+import { LandingPage, Theme } from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
@@ -8,10 +8,11 @@ import { getTheme } from "@/lib/themes";
 
 interface MultiPageRendererProps {
   page: LandingPage;
+  customThemes?: Record<string, Theme>;
 }
 
-export default function MultiPageRenderer({ page }: MultiPageRendererProps) {
-  const theme = getTheme(page.theme || "modern");
+export default function MultiPageRenderer({ page, customThemes }: MultiPageRendererProps) {
+  const theme = getTheme(page.theme || "modern", customThemes);
 
   // Sort and filter components
   const sortedComponents = [...page.components]
