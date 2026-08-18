@@ -8,6 +8,7 @@ import { Plus, Trash2, GripVertical, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Testimonial {
+  id: string;
   content: string;
   author: string;
   role: string;
@@ -28,6 +29,7 @@ export function TestimonialsArrayEditor({ testimonials, onChange }: Testimonials
     onChange([
       ...testimonials,
       {
+        id: `testimonial-${Date.now()}`,
         content: "This product has been amazing! I highly recommend it to everyone.",
         author: "John Doe",
         role: "CEO",

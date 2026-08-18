@@ -416,6 +416,7 @@ export function ComponentEditor({
                 <FeaturesArrayEditor
                   features={
                     config.features as Array<{
+                      id: string;
                       icon?: string;
                       title: string;
                       description: string;
@@ -447,6 +448,7 @@ export function ComponentEditor({
               <PricingArrayEditor
                 plans={
                   config.plans as Array<{
+                    id: string;
                     name: string;
                     price: string;
                     period: string;
@@ -470,6 +472,7 @@ export function ComponentEditor({
               <TestimonialsArrayEditor
                 testimonials={
                   config.testimonials as Array<{
+                    id: string;
                     content: string;
                     author: string;
                     role: string;

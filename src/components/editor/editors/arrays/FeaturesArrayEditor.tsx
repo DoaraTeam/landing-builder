@@ -8,6 +8,7 @@ import { Plus, Trash2, GripVertical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface FeatureItem {
+  id: string;
   icon?: string;
   title: string;
   description: string;
@@ -26,6 +27,7 @@ export function FeaturesArrayEditor({ features, onChange }: FeaturesArrayEditorP
     onChange([
       ...features,
       {
+        id: `feature-${Date.now()}`,
         icon: "⭐",
         title: "New Feature",
         description: "Feature description goes here",

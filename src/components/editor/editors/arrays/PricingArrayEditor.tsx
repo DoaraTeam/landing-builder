@@ -11,6 +11,7 @@ import { LinkSelector } from "@/components/editor/editors/fields/LinkSelector";
 import { ComponentConfig, SubPage } from "@/types/landing";
 
 interface PricingPlan {
+  id: string;
   name: string;
   price: string;
   period: string;
@@ -43,6 +44,7 @@ export function PricingArrayEditor({
     onChange([
       ...plans,
       {
+        id: `plan-${Date.now()}`,
         name: "New Plan",
         price: "$99",
         period: "per month",
