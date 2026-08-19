@@ -32,21 +32,17 @@ export function useAutoSave({
     try {
       await onSave();
       lastSavedRef.current = dataRef.current;
-      toast({
-        title: "💾 Auto-saved",
-        description: "Your changes have been saved automatically",
-        duration: 2000,
-      });
+      // No success toast here — the "All changes saved" indicator in the
+      // toolbar already covers this, and a toast on every autosave tick
+      // would fire too often to be useful.
     } catch (error) {
       console.error("Auto-save failed:", error);
-      toast({
-        title: "⚠️ Auto-save failed",
+      toast.error({
+        title: "Auto-save failed",
         description:
           error instanceof Error
             ? `Auto-save error: ${error.message}`
             : "Failed to save changes automatically. Manual save recommended.",
-        variant: "destructive",
-        duration: 5000,
       });
     }
   }, [onSave, toast]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +75,7 @@ export function ExportImportDialog({
 
       ExportImportManager.downloadAsFile(components, filename, metadata);
 
-      toast({
+      toast.success({
         title: "Template exported",
         description: `Downloaded as ${filename}`,
       });
@@ -100,7 +100,7 @@ export function ExportImportDialog({
 
         ExportImportManager.exportMultiPageHTML(pages, projectName);
 
-        toast({
+        toast.success({
           title: "Multi-page HTML exported",
           description: `Downloaded ${pages.length} pages as ${projectName}.zip`,
         });
@@ -111,7 +111,7 @@ export function ExportImportDialog({
 
         ExportImportManager.downloadAsHTML(components, filename, metadata);
 
-        toast({
+        toast.success({
           title: "HTML exported",
           description: `Downloaded as ${filename}`,
         });
@@ -132,15 +132,14 @@ export function ExportImportDialog({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
 
-      toast({
+      toast.success({
         title: "Copied to clipboard",
         description: `${exportFormat.toUpperCase()} code copied successfully`,
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Copy failed",
         description: "Failed to copy to clipboard",
-        variant: "destructive",
       });
     }
   };
@@ -153,25 +152,23 @@ export function ExportImportDialog({
       const result = await ExportImportManager.importFromFile(file);
       setImportData(JSON.stringify(result, null, 2));
 
-      toast({
+      toast.success({
         title: "File loaded",
         description: "Template file loaded successfully. Click Import to apply.",
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Import failed",
         description: error instanceof Error ? error.message : "Failed to import template",
-        variant: "destructive",
       });
     }
   };
 
   const handleImportFromText = async () => {
     if (!importData.trim()) {
-      toast({
+      toast.warning({
         title: "No data",
         description: "Please paste template data or upload a file",
-        variant: "destructive",
       });
       return;
     }
@@ -187,17 +184,16 @@ export function ExportImportDialog({
           onImport(result.components);
           onClose();
 
-          toast({
+          toast.success({
             title: "Import successful",
             description: `Imported ${result.components.length} components`,
           });
         },
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Import failed",
         description: error instanceof Error ? error.message : "Failed to import template",
-        variant: "destructive",
       });
     }
   };
@@ -211,7 +207,7 @@ export function ExportImportDialog({
         onImport(preset.components);
         onClose();
 
-        toast({
+        toast.success({
           title: "Template applied",
           description: `Applied "${preset.metadata?.title}" template`,
         });
@@ -223,11 +219,11 @@ export function ExportImportDialog({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Import / Export Templates</DialogTitle>
-          </DialogHeader>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Import / Export Templates</SheetTitle>
+          </SheetHeader>
 
           <Tabs defaultValue="export" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -395,8 +391,8 @@ export function ExportImportDialog({
               </div>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={!!confirmReplace}

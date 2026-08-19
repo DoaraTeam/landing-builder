@@ -39,20 +39,18 @@ export function ImageUpload({
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast({
+      toast.warning({
         title: "Invalid File",
         description: "Please select an image file",
-        variant: "destructive",
       });
       return;
     }
 
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast({
+      toast.warning({
         title: "File Too Large",
         description: "Image must be less than 10MB",
-        variant: "destructive",
       });
       return;
     }
@@ -79,16 +77,15 @@ export function ImageUpload({
       setPreview(data.url);
       onChange(data.url);
 
-      toast({
+      toast.success({
         title: "Success",
         description: "Image uploaded successfully",
       });
     } catch (error) {
       console.error("Upload error:", error);
-      toast({
+      toast.error({
         title: "Upload Failed",
         description: "Failed to upload image. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -126,7 +123,7 @@ export function ImageUpload({
                 onClick={() => {
                   setPreview(logo.url);
                   onChange(logo.url);
-                  toast({
+                  toast.success({
                     title: "Logo Selected",
                     description: `${logo.name} logo selected`,
                   });
@@ -231,7 +228,7 @@ export function ImageUpload({
                   onClick={() => {
                     setPreview(logo.url);
                     onChange(logo.url);
-                    toast({
+                    toast.success({
                       title: "Logo Changed",
                       description: `Switched to ${logo.name} logo`,
                     });
