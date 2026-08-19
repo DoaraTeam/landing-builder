@@ -25,6 +25,15 @@ const DialogOverlay = React.forwardRef<
       className
     )}
     {...props}
+    onClick={(e) => {
+      // The overlay/content render through a Portal into document.body, but
+      // React still bubbles the click through the *React* tree (not the DOM
+      // tree). If this Dialog is nested inside a parent with its own onClick
+      // (e.g. a selectable card), that click-to-dismiss would otherwise
+      // reopen/reselect the parent. Stop it here so the dismiss never leaks out.
+      e.stopPropagation();
+      props.onClick?.(e);
+    }}
   />
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
@@ -42,6 +51,15 @@ const DialogContent = React.forwardRef<
         className
       )}
       {...props}
+      onClick={(e) => {
+        // Content renders through a Portal, but React still bubbles clicks
+        // through the *React* tree, not the DOM tree. If this Dialog is
+        // nested inside a parent with its own onClick (e.g. a selectable
+        // card), clicking Cancel/Confirm/X in here would otherwise also
+        // fire that parent handler. Stop it here so it never leaks out.
+        e.stopPropagation();
+        props.onClick?.(e);
+      }}
     >
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
