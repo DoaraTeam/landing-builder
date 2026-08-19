@@ -1,25 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { LandingPage, ComponentConfig, Theme, LandingConfig } from "@/types/landing";
+import { useState, useEffect, useRef } from "react";
+import {
+  LandingPage,
+  ComponentConfig,
+  Theme,
+  LandingConfig,
+  PageNavigation,
+} from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { EditableBlock } from "@/components/editor/core/EditableBlock";
 import { ComponentEditor } from "@/components/editor/core/ComponentEditor";
 import ComponentTemplatesPanel from "@/components/editor/panels/ComponentTemplatesPanel";
 import PageSettingsModal from "@/components/editor/dialogs/PageSettingsModal";
 import { ExportImportDialog } from "@/components/editor/dialogs/ExportImportDialog";
-import { KeyboardShortcutsHelp } from "@/components/editor/panels/KeyboardShortcutsHelp";
 import { HiddenComponentsList } from "@/components/editor/panels/HiddenComponentsList";
 import { ChangeTemplateDialog } from "@/components/editor/dialogs/ChangeTemplateDialog";
 import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 import ThemeSelector from "@/components/editor/selectors/ThemeSelector";
 import CustomThemeCreator from "@/components/editor/selectors/CustomThemeCreator";
+import NavigationSettings from "@/components/editor/selectors/NavigationSettings";
 import { EditModeProvider } from "@/contexts/EditModeContext";
 import { Button } from "@/components/ui/button";
-import { Save, Plus, Settings, Download, HelpCircle, Palette, Paintbrush } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Save,
+  Plus,
+  Settings,
+  Download,
+  Palette,
+  Paintbrush,
+  SlidersHorizontal,
+  ChevronDown,
+  Navigation as NavigationIcon,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useKeyboardShortcuts, COMMON_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
+import { useUndoRedo } from "@/hooks/use-undo-redo";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { getTheme, applyTheme } from "@/lib/themes";
 import {
   DndContext,
@@ -40,12 +66,90 @@ import {
 } from "@dnd-kit/sortable";
 // import { SortableItem } from "./SortableItem";
 
+// The Edit menu (Undo/Redo/Cut/Copy/Paste) lives in the outer editor chrome
+// (AdminDashboard), outside this component, but the state it acts on
+// (undo history, current selection, clipboard) lives in here — this is what
+// gets bubbled up via onEditMenuStateChange so that menu can render/act on it.
+export interface EditMenuState {
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  canCut: boolean;
+  canCopy: boolean;
+  canPaste: boolean;
+  cut: () => void;
+  copy: () => void;
+  paste: () => void;
+}
+
+export const DISABLED_EDIT_MENU_STATE: EditMenuState = {
+  canUndo: false,
+  canRedo: false,
+  undo: () => {},
+  redo: () => {},
+  canCut: false,
+  canCopy: false,
+  canPaste: false,
+  cut: () => {},
+  copy: () => {},
+  paste: () => {},
+};
+
 interface EditableLandingPageProps {
   page: LandingPage;
   theme?: Theme;
   config: LandingConfig;
   onSave: (page: LandingPage) => Promise<void>;
   onSaveCustomTheme?: (theme: Theme, themeId: string) => Promise<void>;
+  onUpdateNavigation?: (navigation: PageNavigation) => void;
+  // Reports whether ComponentEditor has unsaved edits, so a parent that
+  // switches between multiple pages (MultiPageEditor) can guard against
+  // silently discarding them when switching away from this page.
+  onComponentEditorDirtyChange?: (isDirty: boolean) => void;
+  // Bubbles up the current Undo/Redo/Cut/Copy/Paste state so the outer
+  // editor chrome's Edit menu can render and act on it — see EditMenuState.
+  onEditMenuStateChange?: (state: EditMenuState) => void;
+  // The component id the page-tree sidebar's section list currently has
+  // active. Only drives the visual highlight on that block — it does not
+  // open ComponentEditor, since clicking a section tab is navigation, not an
+  // edit intent.
+  activeSectionId?: string | null;
+  // Set to a fresh object whenever the page-tree sidebar drag-reorders this
+  // page's sections, carrying the new component id order to apply.
+  reorderRequest?: { ids: string[] } | null;
+  // When true, renders this page as a read-only preview (used for browsing
+  // version history) — every edit surface (toolbar actions, drag-reorder,
+  // component selection/ComponentEditor, autosave, keyboard shortcuts) is
+  // inert. The canvas still renders live components, just non-interactively.
+  readOnly?: boolean;
+}
+
+// A zero-height hover strip rendered between (and around) sections. Hovering
+// near the seam reveals a line + "+" button to insert a new section right
+// there, instead of only ever being able to append via the toolbar. The
+// outermost canvas card clips overflow (for its rounded corners), so the
+// very first/last divider must not protrude past the edge they sit on —
+// `edge` restricts which direction the hover zone extends.
+function InsertSectionDivider({ onClick, edge }: { onClick: () => void; edge?: "top" | "bottom" }) {
+  return (
+    <div className="group/insert relative z-20 h-0">
+      <div
+        className={`absolute inset-x-0 flex items-center justify-center ${
+          edge === "top" ? "top-0 h-6" : edge === "bottom" ? "bottom-0 h-6" : "-top-3 -bottom-3"
+        }`}
+      >
+        <div className="absolute inset-x-0 h-px bg-blue-400 opacity-0 transition-opacity group-hover/insert:opacity-100" />
+        <button
+          type="button"
+          onClick={onClick}
+          className="relative flex h-6 w-6 items-center justify-center rounded-full border border-blue-400 bg-white text-blue-600 opacity-0 shadow-sm transition-opacity hover:bg-blue-50 group-hover/insert:opacity-100"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -58,22 +162,46 @@ export function EditableLandingPage({
   config,
   onSave,
   onSaveCustomTheme,
+  onUpdateNavigation,
+  onComponentEditorDirtyChange,
+  onEditMenuStateChange,
+  activeSectionId,
+  reorderRequest,
+  readOnly = false,
 }: EditableLandingPageProps) {
-  const [editingPage, setEditingPage] = useState<LandingPage>(page);
+  const {
+    state: editingPage,
+    set: setEditingPage,
+    replace: replaceEditingPage,
+    reset: resetEditingPage,
+    undo: undoEditingPage,
+    redo: redoEditingPage,
+    canUndo,
+    canRedo,
+  } = useUndoRedo<LandingPage>(page);
+  const componentClipboard = useClipboard<ComponentConfig>();
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  // Where a new (non-header) section should be inserted: an index into the
+  // sorted components list, or null to append at the end (the toolbar "+"
+  // button's behavior). Set by the hover "+" between/around sections.
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportImportOpen, setExportImportOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
   const [customThemeCreatorOpen, setCustomThemeCreatorOpen] = useState(false);
+  const [navigationSettingsOpen, setNavigationSettingsOpen] = useState(false);
   const [changeTemplateDialogOpen, setChangeTemplateDialogOpen] = useState(false);
   const [componentToChangeTemplate, setComponentToChangeTemplate] =
     useState<ComponentConfig | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [componentEditorDirty, setComponentEditorDirty] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<{ id: string | null } | null>(null);
+  // Zoom applies only to this page's canvas, not the surrounding editor chrome.
+  const [zoomPercent, setZoomPercent] = useState(100);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  const canvasContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Switching the selected component resets ComponentEditor's local edits (it
@@ -100,9 +228,12 @@ export function EditableLandingPage({
 
   const selectedComponent = editingPage.components.find((c) => c.id === selectedComponentId);
 
-  // Sync editingPage when prop page changes (e.g., when applying version)
+  // Sync editingPage when prop page changes (e.g., when applying version).
+  // Resets undo history too — undoing across an unrelated document swap
+  // wouldn't make sense.
   useEffect(() => {
-    setEditingPage(page);
+    resetEditingPage(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   // Apply theme when page loads or theme changes
@@ -154,19 +285,45 @@ export function EditableLandingPage({
       await onSave(editingPage);
     },
     delay: 5000, // Auto-save every 5 seconds
-    enabled: true,
+    enabled: !readOnly,
   });
+
+  // The page-tree sidebar drag-reordered this page's sections — reorder the
+  // live components (preserving their current, possibly-unsaved config) and
+  // persist immediately, same as sub-page drag-reorder already does, so the
+  // sidebar's own list doesn't snap back to the old order.
+  useEffect(() => {
+    if (!reorderRequest) return;
+
+    const byId = new Map(editingPage.components.map((c) => [c.id, c]));
+    const reordered = reorderRequest.ids
+      .map((id) => byId.get(id))
+      .filter((c): c is ComponentConfig => !!c);
+    const reorderedIds = new Set(reorderRequest.ids);
+    const remaining = editingPage.components.filter((c) => !reorderedIds.has(c.id));
+
+    const updatedComponents = [...reordered, ...remaining].map((c, i) => ({ ...c, order: i }));
+    const updatedPage = { ...editingPage, components: updatedComponents };
+
+    setEditingPage(updatedPage);
+    onSave(updatedPage);
+    setTimeout(() => markAsSaved(updatedPage), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reorderRequest]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
     shortcuts: [
       {
         ...COMMON_SHORTCUTS.SAVE,
-        action: () => !saving && handleSave(),
+        action: () => !saving && hasUnsavedChanges && handleSave(),
       },
       {
         ...COMMON_SHORTCUTS.ADD_COMPONENT,
-        action: () => setTemplatesOpen(true),
+        action: () => {
+          setInsertIndex(null);
+          setTemplatesOpen(true);
+        },
       },
       {
         ...COMMON_SHORTCUTS.TOGGLE_PREVIEW,
@@ -180,7 +337,6 @@ export function EditableLandingPage({
           setTemplatesOpen(false);
           setSettingsOpen(false);
           setExportImportOpen(false);
-          setHelpOpen(false);
         },
       },
       {
@@ -192,25 +348,71 @@ export function EditableLandingPage({
           }
         },
       },
+      {
+        ...COMMON_SHORTCUTS.UNDO,
+        ignoreWhenTyping: true,
+        action: () => canUndo && undoEditingPage(),
+      },
+      {
+        ...COMMON_SHORTCUTS.REDO,
+        ignoreWhenTyping: true,
+        action: () => canRedo && redoEditingPage(),
+      },
+      {
+        ...COMMON_SHORTCUTS.DUPLICATE,
+        ignoreWhenTyping: true,
+        action: () => selectedComponentId && handleDuplicateComponent(selectedComponentId),
+      },
+      {
+        ...COMMON_SHORTCUTS.MOVE_UP,
+        ignoreWhenTyping: true,
+        action: () => selectedComponentId && handleMoveUp(selectedComponentId),
+      },
+      {
+        ...COMMON_SHORTCUTS.MOVE_DOWN,
+        ignoreWhenTyping: true,
+        action: () => selectedComponentId && handleMoveDown(selectedComponentId),
+      },
+      {
+        ...COMMON_SHORTCUTS.CUT,
+        ignoreWhenTyping: true,
+        action: () => selectedComponentId && handleCutComponent(selectedComponentId),
+      },
+      {
+        ...COMMON_SHORTCUTS.COPY,
+        ignoreWhenTyping: true,
+        action: () => selectedComponentId && handleCopyComponent(selectedComponentId),
+      },
+      {
+        ...COMMON_SHORTCUTS.PASTE,
+        ignoreWhenTyping: true,
+        action: () => handlePasteComponent(),
+      },
     ],
-    enabled: true,
+    enabled: !readOnly,
   });
 
-  // Update a component's config
+  // Update a component's config. Saves immediately (same pattern as the
+  // section-reorder handler below) and marks the data as saved so the 5s
+  // autosave timer doesn't also fire its own "Auto-saved" toast for the
+  // same edit a moment later.
   const handleComponentUpdate = (updatedComponent: ComponentConfig) => {
     const updatedComponents = editingPage.components.map((c) =>
       c.id === updatedComponent.id ? updatedComponent : c
     );
 
-    setEditingPage({
+    const updatedPage = {
       ...editingPage,
       components: updatedComponents,
-    });
+    };
 
-    toast({
-      title: "🔧 Component Updated",
+    setEditingPage(updatedPage);
+    onSave(updatedPage);
+    setTimeout(() => markAsSaved(updatedPage), 0);
+
+    toast.success({
+      title: "Component Updated",
       description: `${updatedComponent.type} component has been modified`,
-      duration: 2000,
     });
   };
 
@@ -229,10 +431,9 @@ export function EditableLandingPage({
       components: syncedComponents,
     });
 
-    toast({
-      title: component?.visible ? "👁️ Component Hidden" : "👁️ Component Visible",
+    toast.success({
+      title: component?.visible ? "Component Hidden" : "Component Visible",
       description: `${component?.type || "Component"} is now ${component?.visible ? "hidden" : "visible"} on the page`,
-      duration: 2000,
     });
   };
 
@@ -253,10 +454,9 @@ export function EditableLandingPage({
     }
 
     const deletedComponent = editingPage.components.find((c) => c.id === componentId);
-    toast({
-      title: "🗑️ Component Deleted",
+    toast.success({
+      title: "Component Deleted",
       description: `${deletedComponent?.type || "Component"} has been removed from the page`,
-      duration: 3000,
     });
   };
 
@@ -329,19 +529,21 @@ export function EditableLandingPage({
     return typeNames[component.type] || component.type;
   };
 
-  // Add a new component
-  const handleAddComponent = (component: ComponentConfig) => {
+  // Insert a component at a specific position (or append at the end when
+  // targetIndex is null), enforcing the "one header per page" rule and
+  // re-syncing header nav tabs. Shared by the Add Section flow (via
+  // handleAddComponent, which reads the hover-"+" insertIndex) and Paste
+  // (which targets right after the current selection).
+  const insertComponentAt = (component: ComponentConfig, targetIndex: number | null) => {
     // Header components should always be at the top
     if (component.type === "header") {
       // Check if header already exists
       const hasHeader = editingPage.components.some((c) => c.type === "header");
       if (hasHeader) {
-        toast({
-          title: "⚠️ Cannot Add Header",
+        toast.warning({
+          title: "Cannot Add Header",
           description:
             "Only one header is allowed per page. Please remove the existing header first.",
-          variant: "destructive",
-          duration: 4000,
         });
         return;
       }
@@ -366,35 +568,111 @@ export function EditableLandingPage({
         components: syncedComponents,
       });
 
-      toast({
-        title: "📱 Header Added",
+      toast.success({
+        title: "Header Added",
         description: "Header component has been added with navigation tabs",
-        duration: 3000,
       });
     } else {
-      // For other components, add to the end
-      const maxOrder = Math.max(0, ...editingPage.components.map((c) => c.order));
-      const newComponent = {
-        ...component,
-        order: maxOrder + 1,
-      };
-
-      const updatedComponents = [...editingPage.components, newComponent];
+      const sorted = [...editingPage.components].sort((a, b) => a.order - b.order);
+      const index = targetIndex ?? sorted.length;
+      const newComponents = [...sorted];
+      newComponents.splice(index, 0, component);
+      const reorderedComponents = newComponents.map((c, i) => ({ ...c, order: i }));
 
       // Auto-sync header tabs if header exists
-      const syncedComponents = syncHeaderTabs(updatedComponents);
+      const syncedComponents = syncHeaderTabs(reorderedComponents);
 
       setEditingPage({
         ...editingPage,
         components: syncedComponents,
       });
 
-      toast({
-        title: "➕ Component Added",
+      toast.success({
+        title: "Component Added",
         description: `${component.type} component has been added to your page`,
-        duration: 3000,
       });
     }
+  };
+
+  // Add a new component from the Add Section panel, at the hover-"+"
+  // position it was opened from (or appended at the end from the toolbar).
+  const handleAddComponent = (component: ComponentConfig) => {
+    insertComponentAt(component, insertIndex);
+    setInsertIndex(null);
+  };
+
+  // Copy the selected component onto the shared clipboard (see use-clipboard),
+  // without altering the page.
+  const handleCopyComponent = (componentId: string) => {
+    const component = editingPage.components.find((c) => c.id === componentId);
+    if (!component) return;
+
+    componentClipboard.copy(component);
+    toast.success({
+      title: "Copied",
+      description: `${component.type} component copied — paste it with Ctrl+V`,
+    });
+  };
+
+  // Cut = copy, then remove — reuses handleDeleteComponent for the removal
+  // (and its own "Component Deleted" toast), so cut doesn't need one of its own.
+  const handleCutComponent = (componentId: string) => {
+    const component = editingPage.components.find((c) => c.id === componentId);
+    if (!component) return;
+
+    componentClipboard.copy(component);
+    handleDeleteComponent(componentId);
+  };
+
+  // Paste the clipboard's component right after the current selection (or
+  // append at the end when nothing is selected), as a fresh copy with a new
+  // id so it doesn't collide with the one still on the page (or elsewhere,
+  // if pasted into a different page's editor).
+  const handlePasteComponent = () => {
+    const copied = componentClipboard.value;
+    if (!copied) return;
+
+    const sorted = [...editingPage.components].sort((a, b) => a.order - b.order);
+    const selectedIndex = sorted.findIndex((c) => c.id === selectedComponentId);
+    const targetIndex = selectedIndex === -1 ? null : selectedIndex + 1;
+
+    insertComponentAt(
+      { ...copied, id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` },
+      targetIndex
+    );
+  };
+
+  // Bubble the current Undo/Redo/Cut/Copy/Paste state up to the outer editor
+  // chrome's Edit menu, which lives outside this component. Re-runs whenever
+  // anything the menu depends on changes; onEditMenuStateChange itself is
+  // intentionally excluded so this doesn't loop just because the parent
+  // re-rendered (same pattern as ComponentEditor's onDirtyChange bubble).
+  useEffect(() => {
+    if (readOnly) {
+      onEditMenuStateChange?.(DISABLED_EDIT_MENU_STATE);
+      return;
+    }
+
+    onEditMenuStateChange?.({
+      canUndo,
+      canRedo,
+      undo: undoEditingPage,
+      redo: redoEditingPage,
+      canCut: !!selectedComponentId,
+      canCopy: !!selectedComponentId,
+      canPaste: !!componentClipboard.value,
+      cut: () => selectedComponentId && handleCutComponent(selectedComponentId),
+      copy: () => selectedComponentId && handleCopyComponent(selectedComponentId),
+      paste: handlePasteComponent,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, canUndo, canRedo, selectedComponentId, componentClipboard.value, editingPage]);
+
+  // Opens the Add Section panel targeting a specific insert position (the
+  // hover "+" between/around sections), instead of always appending.
+  const handleOpenInsertAt = (index: number) => {
+    setInsertIndex(index);
+    setTemplatesOpen(true);
   };
 
   // Duplicate a component
@@ -414,7 +692,7 @@ export function EditableLandingPage({
       components: [...editingPage.components, duplicatedComponent],
     });
 
-    toast({
+    toast.success({
       title: "Duplicated",
       description: "Component duplicated successfully",
     });
@@ -457,10 +735,9 @@ export function EditableLandingPage({
       components: syncedComponents,
     });
 
-    toast({
-      title: "🔄 Template Changed",
+    toast.success({
+      title: "Template Changed",
       description: `Component template updated while preserving your content`,
-      duration: 3000,
     });
 
     setComponentToChangeTemplate(null);
@@ -634,7 +911,7 @@ export function EditableLandingPage({
 
     setEditingPage(updatedPage);
 
-    toast({
+    toast.success({
       title: "Settings Updated",
       description: "Page settings saved successfully",
     });
@@ -651,10 +928,9 @@ export function EditableLandingPage({
 
     const themeName = getTheme(themeId, config.themes).name;
 
-    toast({
-      title: "🎨 Theme Changed",
+    toast.success({
+      title: "Theme Changed",
       description: `Switched to ${themeName} theme`,
-      duration: 3000,
     });
   };
 
@@ -669,20 +945,27 @@ export function EditableLandingPage({
       await onSaveCustomTheme(theme, themeId);
       handleThemeChange(themeId);
 
-      toast({
-        title: "✨ Custom Theme Created",
+      toast.success({
+        title: "Custom Theme Created",
         description: `"${theme.name}" has been created and applied!`,
-        duration: 3000,
       });
     } catch (error) {
       console.error("Error saving custom theme:", error);
-      toast({
-        title: "❌ Failed to Save Theme",
+      toast.error({
+        title: "Failed to Save Theme",
         description: "Your custom theme could not be saved. Please try again.",
-        variant: "destructive",
-        duration: 5000,
       });
     }
+  };
+
+  // Update site-wide navigation settings (multi-page only). This is a separate
+  // channel from onSave: navigation lives on the top-level LandingPage regardless
+  // of which page (main or sub-page) is currently being viewed here, so it's
+  // persisted directly via onUpdateNavigation rather than through the generic
+  // onSave, which has different per-page semantics depending on the caller.
+  const handleUpdateNavigation = (navigation: PageNavigation) => {
+    setEditingPage({ ...editingPage, navigation });
+    onUpdateNavigation?.(navigation);
   };
 
   // Move component up
@@ -748,14 +1031,29 @@ export function EditableLandingPage({
         components: reorderedComponents,
       });
 
-      toast({
-        title: "↕️ Components Reordered",
+      toast.success({
+        title: "Components Reordered",
         description: "Component order has been updated successfully",
-        duration: 2000,
       });
     }
 
     setActiveId(null);
+  };
+
+  // Scale the zoomed-out/in canvas back to its natural (100%) width, then
+  // compute the percentage that makes it fit the currently available width.
+  const handleFitZoom = () => {
+    const wrapper = canvasWrapperRef.current;
+    const content = canvasContentRef.current;
+    if (!wrapper || !content) return;
+
+    const naturalWidth = content.scrollWidth / (zoomPercent / 100);
+    if (naturalWidth <= 0) return;
+
+    const fitPercent = Math.round(
+      Math.min(200, Math.max(25, (wrapper.clientWidth / naturalWidth) * 100))
+    );
+    setZoomPercent(fitPercent);
   };
 
   // Save changes
@@ -765,11 +1063,13 @@ export function EditableLandingPage({
     setSaving(true);
     const startTime = Date.now();
 
-    // Show optimistic loading toast with better UX
+    // Loading toast: an exception to the success/error/warning helpers above
+    // since it's dismissed manually once the save settles, not by its own
+    // timer — kept on the base toast() with a long duration as a safety net.
     const savingToast = toast({
-      title: "💾 Saving Changes...",
+      title: "Saving Changes...",
       description: "Processing your updates, please wait a moment",
-      duration: 30000, // Long duration, will be dismissed manually
+      duration: 30000,
     });
 
     try {
@@ -779,8 +1079,10 @@ export function EditableLandingPage({
       // Save to API
       await onSave(processedPage);
 
-      // Update local state with processed page
-      setEditingPage(processedPage);
+      // Update local state with processed page — not an undo step, since
+      // undoing it would revert real image URLs back to transient base64
+      // data that's no longer what's actually persisted.
+      replaceEditingPage(processedPage);
 
       // Mark as saved to reset unsaved changes indicator (after state update)
       setTimeout(() => markAsSaved(processedPage), 0);
@@ -789,36 +1091,24 @@ export function EditableLandingPage({
       const duration = Date.now() - startTime;
       const durationText = duration > 1000 ? `${(duration / 1000).toFixed(1)}s` : `${duration}ms`;
 
-      // Dismiss saving toast after a brief delay to show completion
-      setTimeout(() => {
-        savingToast.dismiss();
-
-        // Show success toast with timing
-        toast({
-          title: "✅ Saved Successfully!",
-          description: `Landing page "${editingPage.title}" saved in ${durationText} (${editingPage.components.length} components)`,
-          duration: 3500, // Slightly shorter for better UX
-        });
-      }, 800); // 800ms delay để user thấy "Saving..." hoàn thành
+      savingToast.dismiss();
+      toast.success({
+        title: "Saved Successfully!",
+        description: `Landing page "${editingPage.title}" saved in ${durationText} (${editingPage.components.length} components)`,
+      });
     } catch (error) {
       console.error("Save error:", error);
 
       const duration = Date.now() - startTime;
 
-      // Dismiss saving toast after a brief delay, then show error
-      setTimeout(() => {
-        savingToast.dismiss();
-
-        toast({
-          title: "❌ Save Failed",
-          description:
-            error instanceof Error
-              ? `Error after ${duration}ms: ${error.message}`
-              : "Failed to save page. Please try again.",
-          variant: "destructive",
-          duration: 6000,
-        });
-      }, 600); // Shorter delay for errors
+      savingToast.dismiss();
+      toast.error({
+        title: "Save Failed",
+        description:
+          error instanceof Error
+            ? `Error after ${duration}ms: ${error.message}`
+            : "Failed to save page. Please try again.",
+      });
     } finally {
       setSaving(false);
     }
@@ -912,208 +1202,277 @@ export function EditableLandingPage({
   const sortedComponents = [...editingPage.components].sort((a, b) => a.order - b.order);
 
   return (
-    <EditModeProvider isEditMode={true} sidebarOpen={!!selectedComponentId}>
+    <EditModeProvider isEditMode={true}>
       <div className="min-h-screen bg-gray-100">
         {/* Top Toolbar */}
-        <div
-          className={`bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm transition-all duration-300 `}
-        >
-          <div
-            className={`px-4 py-4 flex items-center justify-between ${
-              selectedComponentId ? "" : "container mx-auto"
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-lg font-semibold">{editingPage.title}</h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">/{editingPage.slug}</p>
-                  {saving && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-blue-600 font-medium">Saving...</span>
-                    </div>
-                  )}
-                  {!saving && hasUnsavedChanges && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-orange-600 font-medium">Unsaved changes</span>
-                    </div>
-                  )}
-                  {!saving && !hasUnsavedChanges && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-green-600 font-medium">All changes saved</span>
-                    </div>
-                  )}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-sm font-semibold text-gray-900 truncate">{editingPage.title}</h1>
+              {readOnly && (
+                <div className="flex items-center gap-1 shrink-0 rounded-full bg-gray-100 px-2 py-0.5">
+                  <span className="text-xs text-gray-600 font-medium">Read-only preview</span>
                 </div>
-              </div>
+              )}
+              {!readOnly && saving && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-600 font-medium">Saving...</span>
+                </div>
+              )}
+              {!readOnly && !saving && hasUnsavedChanges && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-orange-600 font-medium">Unsaved changes</span>
+                </div>
+              )}
+              {!readOnly && !saving && !hasUnsavedChanges && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-green-600 font-medium">All changes saved</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
-              <HiddenComponentsList
-                components={editingPage.components}
-                onToggleVisibility={handleToggleVisibility}
-                onSelectComponent={requestSelectComponent}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setThemeSelectorOpen(true)}
-                className="gap-1"
-              >
-                <Palette className="h-4 w-4" />
-                Theme
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCustomThemeCreatorOpen(true)}
-                className="gap-1"
-              >
-                <Paintbrush className="h-4 w-4" />
-                Custom Theme
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setExportImportOpen(true)}
-                className="gap-1"
-              >
-                <Download className="h-4 w-4" />
-                Export/Import
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTemplatesOpen(true)}
-                className="gap-1"
-              >
-                <Plus className="h-4 w-4" />
-                Add Component
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSettingsOpen(true)}
-                className="gap-1"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setHelpOpen(true)}
-                className="gap-1"
-              >
-                <HelpCircle className="h-4 w-4" />
-                Help
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                size="sm"
-                className={`gap-1 transition-all duration-200 ${
-                  saving
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : hasUnsavedChanges
-                      ? "bg-orange-600 hover:bg-orange-700"
-                      : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                <Save className={`h-4 w-4 ${saving ? "animate-spin" : ""}`} />
-                {saving ? "Saving..." : hasUnsavedChanges ? "Save Changes*" : "Saved"}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
+                    {zoomPercent}%
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={handleFitZoom}>Fit</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {[50, 75, 90, 100, 125, 150, 200].map((value) => (
+                    <DropdownMenuItem key={value} onClick={() => setZoomPercent(value)}>
+                      {value}%
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {!readOnly && (
+                <>
+                  <HiddenComponentsList
+                    components={editingPage.components}
+                    onToggleVisibility={handleToggleVisibility}
+                    onSelectComponent={requestSelectComponent}
+                  />
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setInsertIndex(null);
+                            setTemplatesOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Add Section</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <DropdownMenu>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900"
+                            >
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Page Settings</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => setTimeout(() => setThemeSelectorOpen(true), 0)}
+                      >
+                        <Palette className="h-4 w-4" />
+                        Theme
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setTimeout(() => setCustomThemeCreatorOpen(true), 0)}
+                      >
+                        <Paintbrush className="h-4 w-4" />
+                        Custom Theme
+                      </DropdownMenuItem>
+                      {editingPage.isMultiPage && onUpdateNavigation && (
+                        <DropdownMenuItem
+                          onClick={() => setTimeout(() => setNavigationSettingsOpen(true), 0)}
+                        >
+                          <NavigationIcon className="h-4 w-4" />
+                          Navigation
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => setTimeout(() => setExportImportOpen(true), 0)}
+                      >
+                        <Download className="h-4 w-4" />
+                        Export/Import
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeout(() => setSettingsOpen(true), 0)}>
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !hasUnsavedChanges}
+                    size="sm"
+                    variant={saving || hasUnsavedChanges ? "default" : "outline"}
+                    className={`h-7 gap-1 px-2 text-xs transition-all duration-200 ${
+                      saving
+                        ? "bg-blue-400 cursor-not-allowed"
+                        : hasUnsavedChanges
+                          ? "bg-orange-600 hover:bg-orange-700"
+                          : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                    }`}
+                  >
+                    <Save className={`h-3.5 w-3.5 ${saving ? "animate-spin" : ""}`} />
+                    {saving ? "Saving..." : hasUnsavedChanges ? "Save Changes*" : "Saved"}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Editor Content */}
-        <div
-          className={`transition-all duration-300 ${
-            selectedComponentId
-              ? "md:ml-96 md:mr-4" // Add margin and reduce width on desktop
-              : "container mx-auto"
-          } px-4 py-8`}
-          style={{
-            maxWidth: selectedComponentId ? "calc(100vw - 400px)" : undefined,
-          }}
-        >
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={sortedComponents.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {sortedComponents.map((component, index) => (
-                  <div key={component.id}>
-                    <EditableBlock
-                      component={component}
-                      isSelected={selectedComponentId === component.id}
-                      onSelect={() => requestSelectComponent(component.id)}
-                      onToggleVisibility={() => handleToggleVisibility(component.id)}
-                      onDelete={() => handleDeleteComponent(component.id)}
-                      onDuplicate={() => handleDuplicateComponent(component.id)}
-                      onChangeTemplate={() => handleOpenChangeTemplate(component.id)}
-                      onMoveUp={() => handleMoveUp(component.id)}
-                      onMoveDown={() => handleMoveDown(component.id)}
-                      canMoveUp={index > 0}
-                      canMoveDown={index < sortedComponents.length - 1}
-                    >
-                      {/* Special wrapper for header to ensure EditableBlock features work properly */}
-                      <div
-                        className={`w-full ${component.type === "header" ? "relative" : "overflow-hidden"}`}
-                        style={
-                          component.type === "header"
-                            ? {
-                                // Contain header within EditableBlock bounds
-                                position: "relative",
-                                isolation: "isolate",
-                              }
-                            : undefined
-                        }
-                      >
-                        <ComponentRenderer component={component} theme={theme} />
+        <div ref={canvasWrapperRef} className="overflow-x-auto">
+          <div
+            ref={canvasContentRef}
+            className="container mx-auto p-4"
+            style={
+              zoomPercent !== 100
+                ? { transform: `scale(${zoomPercent / 100})`, transformOrigin: "top center" }
+                : undefined
+            }
+          >
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {readOnly ? (
+                sortedComponents.map((component) => (
+                  <div
+                    key={component.id}
+                    className={`w-full ${component.type === "header" ? "relative" : "overflow-hidden"}`}
+                    style={
+                      component.type === "header"
+                        ? { position: "relative", isolation: "isolate" }
+                        : undefined
+                    }
+                  >
+                    <ComponentRenderer component={component} theme={theme} />
+                  </div>
+                ))
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={sortedComponents.map((c) => c.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {sortedComponents.map((component, index) => (
+                      <div key={component.id}>
+                        <InsertSectionDivider
+                          onClick={() => handleOpenInsertAt(index)}
+                          edge={index === 0 ? "top" : undefined}
+                        />
+                        <EditableBlock
+                          component={component}
+                          isSelected={
+                            selectedComponentId === component.id || activeSectionId === component.id
+                          }
+                          onSelect={() => requestSelectComponent(component.id)}
+                          onToggleVisibility={() => handleToggleVisibility(component.id)}
+                          onDelete={() => handleDeleteComponent(component.id)}
+                          onDuplicate={() => handleDuplicateComponent(component.id)}
+                          onChangeTemplate={() => handleOpenChangeTemplate(component.id)}
+                          onMoveUp={() => handleMoveUp(component.id)}
+                          onMoveDown={() => handleMoveDown(component.id)}
+                          canMoveUp={index > 0}
+                          canMoveDown={index < sortedComponents.length - 1}
+                          isFirst={index === 0}
+                          isLast={index === sortedComponents.length - 1}
+                        >
+                          {/* Special wrapper for header to ensure EditableBlock features work properly */}
+                          <div
+                            className={`w-full ${component.type === "header" ? "relative" : "overflow-hidden"}`}
+                            style={
+                              component.type === "header"
+                                ? {
+                                    // Contain header within EditableBlock bounds
+                                    position: "relative",
+                                    isolation: "isolate",
+                                  }
+                                : undefined
+                            }
+                          >
+                            <ComponentRenderer component={component} theme={theme} />
+                          </div>
+                        </EditableBlock>
                       </div>
-                    </EditableBlock>
-                  </div>
-                ))}
-              </SortableContext>
+                    ))}
+                    {sortedComponents.length > 0 && (
+                      <InsertSectionDivider
+                        onClick={() => handleOpenInsertAt(sortedComponents.length)}
+                        edge="bottom"
+                      />
+                    )}
+                  </SortableContext>
 
-              <DragOverlay>
-                {activeId ? (
-                  <div className="opacity-50 bg-white rounded-lg shadow-lg p-4 border-2 border-blue-400">
-                    <div className="text-sm font-semibold text-gray-700">Moving component...</div>
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+                  <DragOverlay>
+                    {activeId ? (
+                      <div className="opacity-50 bg-white rounded-lg shadow-lg p-4 border-2 border-blue-400">
+                        <div className="text-sm font-semibold text-gray-700">
+                          Moving component...
+                        </div>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              )}
 
-            {sortedComponents.length === 0 && (
-              <div className="py-20 text-center text-gray-500">
-                <p>No components yet. Add your first component to get started.</p>
-              </div>
-            )}
+              {sortedComponents.length === 0 && (
+                <div className="py-20 text-center text-gray-500">
+                  <p>No components yet. Add your first component to get started.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Component Editor Panel */}
-        {selectedComponent && (
+        {/* Component Editor Panel — always mounted (even with nothing
+            selected) so it can play its close transition instead of
+            vanishing instantly. Not rendered at all in read-only mode, since
+            nothing can select a component to edit there. */}
+        {!readOnly && (
           <ComponentEditor
-            component={selectedComponent}
+            component={selectedComponent ?? null}
             onUpdate={handleComponentUpdate}
             onClose={() => setSelectedComponentId(null)}
             allComponents={editingPage.components}
             subPages={editingPage.subPages || []}
             pageSlug={editingPage.slug}
             isMultiPage={editingPage.isMultiPage}
-            onDirtyChange={setComponentEditorDirty}
+            onDirtyChange={(isDirty) => {
+              setComponentEditorDirty(isDirty);
+              onComponentEditorDirtyChange?.(isDirty);
+            }}
           />
         )}
 
@@ -1136,7 +1495,10 @@ export function EditableLandingPage({
         {/* Component Templates Panel */}
         <ComponentTemplatesPanel
           open={templatesOpen}
-          onOpenChange={setTemplatesOpen}
+          onOpenChange={(open) => {
+            setTemplatesOpen(open);
+            if (!open) setInsertIndex(null);
+          }}
           onAddComponent={handleAddComponent}
           existingComponents={editingPage.components}
         />
@@ -1167,9 +1529,6 @@ export function EditableLandingPage({
           pageTitle={editingPage.title}
         />
 
-        {/* Keyboard Shortcuts Help */}
-        <KeyboardShortcutsHelp isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
-
         {/* Theme Selector */}
         <ThemeSelector
           open={themeSelectorOpen}
@@ -1184,6 +1543,16 @@ export function EditableLandingPage({
           onOpenChange={setCustomThemeCreatorOpen}
           onSaveTheme={handleSaveCustomTheme}
         />
+
+        {/* Navigation Settings (multi-page only) */}
+        {editingPage.isMultiPage && onUpdateNavigation && (
+          <NavigationSettings
+            open={navigationSettingsOpen}
+            onOpenChange={setNavigationSettingsOpen}
+            navigation={editingPage.navigation}
+            onUpdate={handleUpdateNavigation}
+          />
+        )}
 
         {/* Change Template Dialog */}
         {componentToChangeTemplate && (
