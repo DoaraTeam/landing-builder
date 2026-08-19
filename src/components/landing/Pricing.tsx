@@ -73,8 +73,11 @@ export function Pricing({ config }: PricingProps) {
             className="w-full max-w-6xl mx-auto"
           >
             <CarouselContent>
-              {plans.map((plan) => (
-                <CarouselItem key={plan.id} className="md:basis-1/2 lg:basis-1/3">
+              {plans.map((plan, index) => (
+                <CarouselItem
+                  key={plan.id || `plan-${index}`}
+                  className="md:basis-1/2 lg:basis-1/3"
+                >
                   <div className="p-1 h-full pt-6">
                     <Card
                       className={`relative h-full overflow-visible`}
@@ -152,9 +155,9 @@ export function Pricing({ config }: PricingProps) {
             variants={stagger.containerVariants}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto pt-6"
           >
-            {plans.map((plan) => (
+            {plans.map((plan, index) => (
               <motion.div
-                key={plan.id}
+                key={plan.id || `plan-${index}`}
                 variants={{
                   hidden: { opacity: 0, y: 20 },
                   visible: {

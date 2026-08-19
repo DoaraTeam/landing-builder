@@ -130,9 +130,9 @@ export function Stats({ config, theme }: StatsProps) {
           animate={stagger.animate}
           ref={stagger.ref}
         >
-          {stats.map((stat: Stat) => (
+          {stats.map((stat: Stat, index) => (
             <motion.div
-              key={stat.id}
+              key={stat.id || `stat-${index}`}
               className="text-center"
               variants={{
                 hidden: { opacity: 0, y: 20 },

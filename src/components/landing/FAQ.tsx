@@ -106,11 +106,11 @@ export function FAQ({ config, theme }: FAQProps) {
 
           {/* FAQ Items */}
           <div className={`grid grid-cols-1 ${columnClass} gap-4`}>
-            {faqs?.map((item) => {
+            {faqs?.map((item, index) => {
               const isOpen = openItems.has(item.id);
               return (
                 <div
-                  key={item.id}
+                  key={item.id || `faq-${index}`}
                   className="border rounded-lg overflow-hidden transition-all"
                   style={{
                     borderColor: isOpen ? primaryColor : "#e5e7eb",
