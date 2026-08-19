@@ -8,6 +8,8 @@ import MultiPageRenderer from "@/components/landing/MultiPageRenderer";
 import { getTheme } from "@/lib/themes";
 import { Metadata } from "next";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
+import { JsonLd } from "@/components/seo/json-ld";
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * Generate metadata for SEO from published page
@@ -71,9 +73,22 @@ export default async function PublishedPage() {
     // Check if multi-page (either by flag or presence of subPages)
     const isMultiPage = page.isMultiPage || (page.subPages && page.subPages.length > 0);
 
+    const websiteJsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: page.title,
+      url: `${SITE_URL}/publish`,
+      ...(page.description ? { description: page.description } : {}),
+    };
+
     // If multi-page, use MultiPageRenderer
     if (isMultiPage) {
-      return <MultiPageRenderer page={page} customThemes={config.themes} />;
+      return (
+        <>
+          <JsonLd data={websiteJsonLd} />
+          <MultiPageRenderer page={page} customThemes={config.themes} />
+        </>
+      );
     }
 
     // Single page - sort components and filter visible ones
@@ -91,21 +106,24 @@ export default async function PublishedPage() {
     };
 
     return (
-      <ThemeProvider theme={theme}>
-        <LandingPageLoader
-          enabled={loadingConfig.enabled}
-          type={loadingConfig.type}
-          color={loadingConfig.color || "#f97316"}
-          duration={loadingConfig.duration || 1000}
-          minDuration={loadingConfig.minDuration || 500}
-        >
-          <main className="min-h-screen">
-            {sortedComponents.map((component) => (
-              <ComponentRenderer key={component.id} component={component} theme={theme} />
-            ))}
-          </main>
-        </LandingPageLoader>
-      </ThemeProvider>
+      <>
+        <JsonLd data={websiteJsonLd} />
+        <ThemeProvider theme={theme}>
+          <LandingPageLoader
+            enabled={loadingConfig.enabled}
+            type={loadingConfig.type}
+            color={loadingConfig.color || "#f97316"}
+            duration={loadingConfig.duration || 1000}
+            minDuration={loadingConfig.minDuration || 500}
+          >
+            <main className="min-h-screen">
+              {sortedComponents.map((component) => (
+                <ComponentRenderer key={component.id} component={component} theme={theme} />
+              ))}
+            </main>
+          </LandingPageLoader>
+        </ThemeProvider>
+      </>
     );
   } catch (error) {
     console.error("Error rendering landing page:", error);

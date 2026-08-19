@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
 import { getTheme } from "@/lib/themes";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
+import { JsonLd } from "@/components/seo/json-ld";
+import { SITE_URL } from "@/lib/site-url";
 
 interface PageProps {
   params: {
@@ -73,10 +75,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       };
     }
 
-    // Use parent page SEO config as base
+    // A sub-page with its own SEOConfig is fully independent — no
+    // fallback/override needed.
+    if (subPage.seo) {
+      return seoConfigToMetadata(subPage.seo);
+    }
+
+    // Older sub-pages (created before per-page SEO existed) inherit the
+    // parent page's SEOConfig as a base, overridden with subpage-specific
+    // title/description, same as before.
     const baseMetadata = page.seo ? seoConfigToMetadata(page.seo) : {};
 
-    // Override with subpage specific info
     return {
       ...baseMetadata,
       title: `${subPage.title} - ${page.title}`,
@@ -141,22 +150,41 @@ export default async function SubPage({ params }: PageProps) {
       minDuration: 500,
     };
 
+    // Legacy pages (unlike the current-landing model) have no route of their
+    // own at just /{slug} — only /{slug}/{subpage} — so there's no real URL
+    // for a "page root" crumb to point to. Only the reachable page is listed.
+    const breadcrumbJsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: `${page.title} – ${subPage.title}`,
+          item: `${SITE_URL}/${page.slug}/${subPage.slug}`,
+        },
+      ],
+    };
+
     return (
-      <ThemeProvider theme={theme}>
-        <LandingPageLoader
-          enabled={loadingConfig.enabled}
-          type={loadingConfig.type}
-          color={loadingConfig.color || "#f97316"}
-          duration={loadingConfig.duration || 1000}
-          minDuration={loadingConfig.minDuration || 500}
-        >
-          <main className="min-h-screen">
-            {sortedComponents.map((component) => (
-              <ComponentRenderer key={component.id} component={component} theme={theme} />
-            ))}
-          </main>
-        </LandingPageLoader>
-      </ThemeProvider>
+      <>
+        <JsonLd data={breadcrumbJsonLd} />
+        <ThemeProvider theme={theme}>
+          <LandingPageLoader
+            enabled={loadingConfig.enabled}
+            type={loadingConfig.type}
+            color={loadingConfig.color || "#f97316"}
+            duration={loadingConfig.duration || 1000}
+            minDuration={loadingConfig.minDuration || 500}
+          >
+            <main className="min-h-screen">
+              {sortedComponents.map((component) => (
+                <ComponentRenderer key={component.id} component={component} theme={theme} />
+              ))}
+            </main>
+          </LandingPageLoader>
+        </ThemeProvider>
+      </>
     );
   } catch (error) {
     console.error("Error rendering subpage:", error);

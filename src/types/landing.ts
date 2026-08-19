@@ -665,6 +665,11 @@ export interface SubPage {
   components: ComponentConfig[];
   order: number;
   visible: boolean;
+  // Optional — sub-pages created before this existed (or never edited since)
+  // fall back to the parent page's SEOConfig with title/description
+  // overridden, same as before. Set this to give a sub-page fully
+  // independent SEO (its own robots/canonical/OG/Twitter/verification/etc.).
+  seo?: SEOConfig;
 }
 
 /**

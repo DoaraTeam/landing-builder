@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SubPage, ComponentConfig } from "@/types/landing";
+import { SubPage, ComponentConfig, SEOConfig } from "@/types/landing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SEOEditor from "@/components/editor/editors/fields/SEOEditor";
 
 interface SubPageFormDialogProps {
   open: boolean;
@@ -44,6 +46,11 @@ export default function SubPageFormDialog({
     icon: "",
     description: "",
   });
+  const [seoConfig, setSeoConfig] = useState<SEOConfig>({
+    metaTitle: "",
+    metaDescription: "",
+    keywords: [],
+  });
 
   // Re-seed the form whenever the dialog opens or the target page changes,
   // instead of relying on internally-owned open state.
@@ -59,6 +66,18 @@ export default function SubPageFormDialog({
             description: subPageToEdit.description || "",
           }
         : { title: "", slug: "", icon: "", description: "" }
+    );
+
+    // Sub-pages created before per-page SEO existed (or never edited since)
+    // don't have their own seo yet — seed from title/description so the
+    // fields aren't blank, same fallback PageSettingsModal uses for the
+    // main page.
+    setSeoConfig(
+      subPageToEdit?.seo || {
+        metaTitle: subPageToEdit?.title || "",
+        metaDescription: subPageToEdit?.description || "",
+        keywords: [],
+      }
     );
   }, [open, subPageToEdit]);
 
@@ -79,115 +98,133 @@ export default function SubPageFormDialog({
   const handleSave = () => {
     if (!formData.title.trim()) return;
 
-    if (subPageToEdit) {
-      onSave({
-        ...subPageToEdit,
-        title: formData.title,
-        slug: formData.slug || generateSlug(formData.title),
-        icon: formData.icon,
-        description: formData.description,
-      });
-    } else {
-      // Inherit components from the main page (deep copy with new IDs)
-      const inheritedComponents = mainPageComponents.map((comp, index) => ({
-        ...comp,
-        id: `comp-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
-        order: index,
-        config: JSON.parse(JSON.stringify(comp.config)),
-      }));
+    // onSave can update the currently-active EditableLandingPage's `page`
+    // prop (e.g. when editing the sub-page currently open in the canvas),
+    // which resets its state — a big enough change to race this Sheet's own
+    // close if fired in the same tick, sometimes leaving Radix's
+    // document.body pointer-events lock stuck (whole editor goes
+    // unclickable). Close first, defer the save to the next tick.
+    const save = subPageToEdit
+      ? {
+          ...subPageToEdit,
+          title: formData.title,
+          slug: formData.slug || generateSlug(formData.title),
+          icon: formData.icon,
+          description: formData.description,
+          seo: seoConfig,
+        }
+      : {
+          id: `subpage-${Date.now()}`,
+          title: formData.title,
+          slug: formData.slug || generateSlug(formData.title),
+          icon: formData.icon,
+          description: formData.description,
+          // Inherit components from the main page (deep copy with new IDs)
+          components: mainPageComponents.map((comp, index) => ({
+            ...comp,
+            id: `comp-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+            order: index,
+            config: JSON.parse(JSON.stringify(comp.config)),
+          })),
+          order: existingSubPages.length,
+          visible: true,
+          seo: seoConfig,
+        };
 
-      onSave({
-        id: `subpage-${Date.now()}`,
-        title: formData.title,
-        slug: formData.slug || generateSlug(formData.title),
-        icon: formData.icon,
-        description: formData.description,
-        components: inheritedComponents,
-        order: existingSubPages.length,
-        visible: true,
-      });
-    }
+    setTimeout(() => onSave(save), 0);
 
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{subPageToEdit ? "Chỉnh sửa trang" : "Tạo trang mới"}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{subPageToEdit ? "Chỉnh sửa trang" : "Tạo trang mới"}</SheetTitle>
+          <SheetDescription>
             {subPageToEdit
-              ? "Cập nhật thông tin trang con"
+              ? "Cập nhật thông tin và SEO cho trang con"
               : `Thêm một trang con vào landing page. Trang mới sẽ kế thừa ${mainPageComponents.length} components từ trang chính.`}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Tiêu đề *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="Ví dụ: Tính năng"
-            />
-          </div>
+        <Tabs defaultValue="info" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="info">Thông tin</TabsTrigger>
+            <TabsTrigger value="seo">SEO</TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug *</Label>
-            <Input
-              id="slug"
-              value={formData.slug}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
-                })
-              }
-              placeholder="tinh-nang"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="icon">Icon (emoji hoặc tên icon)</Label>
-            <Input
-              id="icon"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              placeholder="🚀 hoặc rocket"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Mô tả</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Mô tả ngắn về trang này"
-            />
-          </div>
-
-          {!subPageToEdit && mainPageComponents.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                <strong>💡 Lưu ý:</strong> Trang mới sẽ tự động kế thừa {mainPageComponents.length}{" "}
-                components từ trang chính. Bạn có thể chỉnh sửa sau khi tạo.
-              </p>
+          <TabsContent value="info" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Tiêu đề *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="Ví dụ: Tính năng"
+              />
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug *</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                  })
+                }
+                placeholder="tinh-nang"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="icon">Icon (emoji hoặc tên icon)</Label>
+              <Input
+                id="icon"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="🚀 hoặc rocket"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Mô tả</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Mô tả ngắn về trang này"
+              />
+            </div>
+
+            {!subPageToEdit && mainPageComponents.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>💡 Lưu ý:</strong> Trang mới sẽ tự động kế thừa{" "}
+                  {mainPageComponents.length} components từ trang chính. Bạn có thể chỉnh sửa sau
+                  khi tạo.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="seo" className="mt-4">
+            <SEOEditor config={seoConfig} onChange={setSeoConfig} />
+          </TabsContent>
+        </Tabs>
+
+        <SheetFooter className="mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
           <Button onClick={handleSave} disabled={!formData.title.trim()}>
             {subPageToEdit ? "Cập nhật" : "Tạo"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
