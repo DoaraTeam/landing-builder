@@ -3,7 +3,6 @@
 
 import { Theme, HeroConfig } from "@/types/landing";
 import { Button } from "@/components/ui/button";
-import { useEditMode } from "@/contexts/EditModeContext";
 import { getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
 import { getLayoutClasses } from "@/lib/layout-utils";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
@@ -14,7 +13,6 @@ interface HeroProps {
 }
 
 export function Hero({ config, theme }: HeroProps) {
-  const { isEditMode, sidebarOpen } = useEditMode();
   const {
     title,
     subtitle,
@@ -72,11 +70,7 @@ export function Hero({ config, theme }: HeroProps) {
       >
         {/* Overlay for image backgrounds - handled in getBackgroundStyle */}
 
-        <div
-          className={`relative z-10 flex flex-col ${layout.alignment} ${
-            isEditMode && sidebarOpen ? "px-4 mx-auto max-w-none" : layout.container
-          }`}
-        >
+        <div className={`relative z-10 flex flex-col ${layout.alignment} ${layout.container}`}>
           {/* Subtitle */}
           {subtitle && (
             <div

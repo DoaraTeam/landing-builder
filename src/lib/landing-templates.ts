@@ -269,6 +269,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "No hidden fees. Cancel anytime.",
           plans: [
             {
+              id: "1",
               name: "Starter",
               price: "$29",
               period: "/month",
@@ -287,6 +288,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               highlighted: false,
             },
             {
+              id: "2",
               name: "Professional",
               price: "$79",
               period: "/month",
@@ -307,6 +309,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               badge: "Most Popular",
             },
             {
+              id: "3",
               name: "Enterprise",
               price: "$199",
               period: "/month",
@@ -351,6 +354,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Real feedback from real customers who love our platform",
           testimonials: [
             {
+              id: "1",
               content:
                 "This platform has transformed how we do business. The ROI was evident within the first month! Our team productivity increased by 40% and customer satisfaction scores jumped to 98%.",
               author: "Sarah Johnson",
@@ -360,6 +364,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=1",
             },
             {
+              id: "2",
               content:
                 "Outstanding support team and incredibly powerful features. The analytics dashboard alone has saved us 20 hours per week. Integration with our existing tools was seamless.",
               author: "Michael Chen",
@@ -369,6 +374,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=2",
             },
             {
+              id: "3",
               content:
                 "We've tried many solutions, but this one stands out. It's simply the best in the market. Helped us scale from 10 to 500 customers without any hiccups.",
               author: "Emily Rodriguez",
@@ -378,6 +384,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=3",
             },
             {
+              id: "4",
               content:
                 "The automation features have been a game-changer for us. We've reduced manual tasks by 70% and can now focus on strategic initiatives that drive growth.",
               author: "David Park",
@@ -387,6 +394,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=10",
             },
             {
+              id: "5",
               content:
                 "Security and compliance were our top priorities. This platform exceeded our expectations with SOC 2 certification and comprehensive audit logs.",
               author: "Lisa Anderson",
@@ -396,6 +404,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=12",
             },
             {
+              id: "6",
               content:
                 "Our sales team loves the mobile app and real-time notifications. Response times improved by 60% and deal closure rates are up 35%. Incredible results!",
               author: "James Wilson",
@@ -830,6 +839,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Don't just take our word for it - hear from our customers",
           testimonials: [
             {
+              id: "1",
               content:
                 "Switching to this platform was the best decision we made this year. Our team productivity increased by 45% in just 2 months. The automation features alone save us 15 hours per week!",
               author: "Alex Thompson",
@@ -839,6 +849,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=33",
             },
             {
+              id: "2",
               content:
                 "Finally, a SaaS solution that actually delivers on its promises. The interface is intuitive, onboarding was seamless, and support team is incredibly responsive. We're all in!",
               author: "Maria Garcia",
@@ -848,6 +859,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=44",
             },
             {
+              id: "3",
               content:
                 "We evaluated 10+ tools before choosing this one. The analytics dashboard gives us insights we never had before, and the integrations work flawlessly. Worth every penny!",
               author: "James Kim",
@@ -857,6 +869,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=14",
             },
             {
+              id: "4",
               content:
                 "The mobile apps are fantastic - I can manage my entire workflow on the go. Real-time sync means I'm always up to date no matter which device I'm using. Game changer!",
               author: "Sophie Laurent",
@@ -866,6 +879,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=25",
             },
             {
+              id: "5",
               content:
                 "Security was our biggest concern when choosing a cloud solution. Their SOC 2 certification and robust access controls gave us the confidence we needed. No regrets!",
               author: "Robert Chang",
@@ -875,6 +889,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=52",
             },
             {
+              id: "6",
               content:
                 "Customer support is outstanding - they actually care about our success. Had a complex integration question and got a detailed response within 30 minutes. Impressive!",
               author: "Emma Wilson",
@@ -910,6 +925,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
             "All plans include 14-day free trial. No credit card required. Cancel anytime.",
           plans: [
             {
+              id: "1",
               name: "Starter",
               price: "$0",
               period: "/month",
@@ -929,6 +945,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               highlighted: false,
             },
             {
+              id: "2",
               name: "Professional",
               price: "$49",
               period: "/month",
@@ -951,6 +968,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               badge: "Most Popular",
             },
             {
+              id: "3",
               name: "Enterprise",
               price: "$149",
               period: "/month",
@@ -1235,6 +1253,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "See what our clients have to say",
           testimonials: [
             {
+              id: "1",
               content:
                 "The team delivered beyond our expectations. Our website traffic increased by 300%!",
               author: "Alex Thompson",
@@ -1244,6 +1263,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=10",
             },
             {
+              id: "2",
               content: "Professional, creative, and always on time. A pleasure to work with!",
               author: "Jessica Lee",
               role: "Marketing Lead",
@@ -1252,6 +1272,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=11",
             },
             {
+              id: "3",
               content: "They transformed our brand completely. The results speak for themselves.",
               author: "David Park",
               role: "CEO",
@@ -1458,6 +1479,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Join thousands of satisfied shoppers",
           testimonials: [
             {
+              id: "1",
               content: "Love the quality and fast shipping! Will definitely order again.",
               author: "Emma Wilson",
               role: "Verified Buyer",
@@ -1466,6 +1488,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=5",
             },
             {
+              id: "2",
               content: "Best online shopping experience. Great products and customer service!",
               author: "James Brown",
               role: "Verified Buyer",
@@ -1474,6 +1497,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=6",
             },
             {
+              id: "3",
               content: "Amazing deals and quick delivery. Highly recommend to everyone!",
               author: "Sophia Martinez",
               role: "Verified Buyer",
@@ -1671,6 +1695,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Building lasting relationships through quality work",
           testimonials: [
             {
+              id: "1",
               content:
                 "Exceptional work! The attention to detail and creativity exceeded our expectations.",
               author: "Rachel Green",
@@ -1680,6 +1705,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=8",
             },
             {
+              id: "2",
               content:
                 "Professional, reliable, and talented. A pleasure to work with from start to finish.",
               author: "Tom Anderson",
@@ -1883,6 +1909,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "14-day free trial • No credit card required",
           plans: [
             {
+              id: "1",
               name: "Starter",
               price: "$99",
               period: "/month",
@@ -1901,6 +1928,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               highlighted: false,
             },
             {
+              id: "2",
               name: "Professional",
               price: "$299",
               period: "/month",
@@ -1922,6 +1950,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               badge: "Most Popular",
             },
             {
+              id: "3",
               name: "Enterprise",
               price: "Custom",
               period: "",
@@ -1967,6 +1996,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Join 500+ companies using our AI platform",
           testimonials: [
             {
+              id: "1",
               content:
                 "This AI platform has revolutionized our data analysis. We've reduced processing time by 80% and improved accuracy significantly.",
               author: "Sarah Chen",
@@ -1976,6 +2006,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=1",
             },
             {
+              id: "2",
               content:
                 "The NLP capabilities are outstanding. We've automated our customer support and increased satisfaction by 40%.",
               author: "Michael Roberts",
@@ -1985,6 +2016,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=2",
             },
             {
+              id: "3",
               content:
                 "Best-in-class computer vision API. Easy integration and incredibly accurate results. Highly recommended!",
               author: "Emma Watson",
@@ -2190,6 +2222,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Rated 4.9/5 on Google Reviews",
           testimonials: [
             {
+              id: "1",
               content:
                 "Absolutely stunning! The food was exceptional and the service was impeccable. Best dining experience in the city.",
               author: "Jennifer Williams",
@@ -2199,6 +2232,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=5",
             },
             {
+              id: "2",
               content:
                 "Perfect for our anniversary dinner. The ambiance, food, and service exceeded all expectations. Will definitely return!",
               author: "David & Maria Lopez",
@@ -2208,6 +2242,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=6",
             },
             {
+              id: "3",
               content:
                 "Every dish was a masterpiece. The chef's attention to detail and flavor combinations are truly outstanding.",
               author: "Robert Chen",
@@ -2418,6 +2453,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "All plans include access to facilities and group classes",
           plans: [
             {
+              id: "1",
               name: "Basic",
               price: "$29",
               period: "/month",
@@ -2435,6 +2471,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               highlighted: false,
             },
             {
+              id: "2",
               name: "Premium",
               price: "$59",
               period: "/month",
@@ -2455,6 +2492,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               badge: "Best Value",
             },
             {
+              id: "3",
               name: "Elite",
               price: "$99",
               period: "/month",
@@ -2499,6 +2537,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "See how FitLife changed their lives",
           testimonials: [
             {
+              id: "1",
               content:
                 "Lost 30 pounds in 6 months! The trainers are amazing and the community keeps me motivated every day.",
               author: "Jessica Martinez",
@@ -2508,6 +2547,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=8",
             },
             {
+              id: "2",
               content:
                 "Best gym I've ever joined. The facilities are top-notch and the atmosphere is incredibly supportive.",
               author: "Tom Anderson",
@@ -2517,6 +2557,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=9",
             },
             {
+              id: "3",
               content:
                 "The group classes are fantastic! I've made great friends and achieved fitness goals I never thought possible.",
               author: "Lisa Thompson",
@@ -2721,6 +2762,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "Trusted by thousands of happy homeowners",
           testimonials: [
             {
+              id: "1",
               content:
                 "Found our dream home in just 2 weeks! The agent was professional, knowledgeable, and made the process seamless.",
               author: "Amanda & John Miller",
@@ -2730,6 +2772,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=11",
             },
             {
+              id: "2",
               content:
                 "Sold our property for 15% above asking price. Outstanding service and marketing strategy!",
               author: "Robert Davidson",
@@ -2739,6 +2782,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=12",
             },
             {
+              id: "3",
               content:
                 "Best real estate experience ever. The team went above and beyond to find exactly what we wanted.",
               author: "Sofia Rodriguez",
@@ -2949,6 +2993,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "7-day free trial • No credit card required",
           plans: [
             {
+              id: "1",
               name: "Free",
               price: "$0",
               period: "/forever",
@@ -2961,6 +3006,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               highlighted: false,
             },
             {
+              id: "2",
               name: "Pro",
               price: "$9.99",
               period: "/month",
@@ -2981,6 +3027,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               badge: "Popular",
             },
             {
+              id: "3",
               name: "Teams",
               price: "$29.99",
               period: "/month",
@@ -3025,6 +3072,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
           description: "4.8/5 rating on App Store & Google Play",
           testimonials: [
             {
+              id: "1",
               content:
                 "This app has completely changed how I organize my life. Can't imagine my day without it!",
               author: "Emily Watson",
@@ -3034,6 +3082,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=14",
             },
             {
+              id: "2",
               content:
                 "Simple, beautiful, and incredibly powerful. Best app I've downloaded this year!",
               author: "Marcus Johnson",
@@ -3043,6 +3092,7 @@ export const landingPageTemplates: LandingPageTemplate[] = [
               avatar: "https://i.pravatar.cc/150?img=15",
             },
             {
+              id: "3",
               content:
                 "The team collaboration features are game-changing. Our productivity has increased by 40%!",
               author: "Lisa Chang",

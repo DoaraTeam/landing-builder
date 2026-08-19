@@ -1,7 +1,6 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Keyboard, Command } from "lucide-react";
 
@@ -21,12 +20,15 @@ const shortcuts = [
   { keys: ["Ctrl", "D"], description: "Duplicate component" },
   { keys: ["Ctrl", "Z"], description: "Undo action" },
   { keys: ["Ctrl", "Y"], description: "Redo action" },
+  { keys: ["Ctrl", "X"], description: "Cut selected component" },
+  { keys: ["Ctrl", "C"], description: "Copy selected component" },
+  { keys: ["Ctrl", "V"], description: "Paste component" },
 ];
 
 export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelpProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="h-5 w-5" />
@@ -34,7 +36,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
           {shortcuts.map((shortcut, index) => (
             <div key={index} className="flex items-center justify-between py-2">
               <span className="text-sm text-gray-700">{shortcut.description}</span>
@@ -59,15 +61,6 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="pt-4 border-t">
-          <p className="text-xs text-gray-500 mb-3">
-            Auto-save is enabled and will save your changes every 5 seconds automatically.
-          </p>
-          <Button onClick={onClose} className="w-full">
-            Got it
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

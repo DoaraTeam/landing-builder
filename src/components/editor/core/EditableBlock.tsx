@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ComponentConfig } from "@/types/landing";
 import {
   Eye,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSortable } from "@dnd-kit/sortable";
+import { getComponentDisplayName } from "@/lib/component-labels";
+import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 
 interface EditableBlockProps {
   component: ComponentConfig;
@@ -27,6 +30,13 @@ interface EditableBlockProps {
   onMoveDown?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  // First/last block in the page — the outer canvas card clips to a rounded
+  // corner (rounded-xl) via overflow-hidden, so this block's own hover/select
+  // border and overlay need matching rounded top/bottom corners. Without it,
+  // the canvas's clip cuts the square corner off the border right where it
+  // sits, making the hover effect look like it's missing at that corner.
+  isFirst?: boolean;
+  isLast?: boolean;
   children: React.ReactNode;
 }
 
@@ -46,46 +56,21 @@ export function EditableBlock({
   onMoveDown,
   canMoveUp = true,
   canMoveDown = true,
+  isFirst = false,
+  isLast = false,
   children,
 }: EditableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: component.id,
   });
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     zIndex: isDragging ? 50 : undefined,
   };
-  const getComponentName = (type: string) => {
-    const names: Record<string, string> = {
-      header: "Header Navigation",
-      hero: "Hero Section",
-      features: "Features",
-      pricing: "Pricing",
-      testimonials: "Testimonials",
-      cta: "Call to Action",
-      footer: "Footer",
-      stats: "Statistics",
-      team: "Team",
-      faq: "FAQ",
-      gallery: "Gallery",
-      "logo-cloud": "Logo Cloud",
-      contact: "Contact",
-      content: "Content",
-      newsletter: "Newsletter",
-      video: "Video",
-      "gym-hero": "Gym Hero",
-      "gym-services": "Gym Services",
-      "gym-pricing": "Gym Pricing",
-      "gym-testimonials": "Gym Testimonials",
-      "gym-navigation": "Gym Navigation",
-      "gym-about": "Gym About",
-      "gym-contact": "Gym Contact",
-    };
-    return names[type] || type;
-  };
-
+  const edgeRounding = `${isFirst ? "rounded-t-xl" : ""} ${isLast ? "rounded-b-xl" : ""}`;
   return (
     <div
       ref={setNodeRef}
@@ -98,7 +83,7 @@ export function EditableBlock({
 
       {/* Border Indicator - Clean solid border when selected */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-all duration-200 ${
+        className={`absolute inset-0 pointer-events-none transition-all duration-200 ${edgeRounding} ${
           isSelected
             ? "border-2 border-blue-500"
             : "border-2 border-transparent group-hover:border-gray-300"
@@ -107,7 +92,7 @@ export function EditableBlock({
 
       {/* Edit Overlay - Shows on hover or when selected */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-all duration-200 ${
+        className={`absolute inset-0 pointer-events-none transition-all duration-200 ${edgeRounding} ${
           isSelected
             ? "bg-blue-500 bg-opacity-5"
             : "bg-blue-500 bg-opacity-0 group-hover:bg-opacity-3"
@@ -143,7 +128,7 @@ export function EditableBlock({
 
           {/* Component Label */}
           <div className="px-2 text-xs font-medium text-gray-700">
-            {getComponentName(component.type)}
+            {getComponentDisplayName(component.type)}
           </div>
 
           <div className="w-px h-4 bg-gray-300" />
@@ -255,9 +240,7 @@ export function EditableBlock({
             className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm(`Delete ${getComponentName(component.type)}?`)) {
-                onDelete();
-              }
+              setDeleteConfirmOpen(true);
             }}
             title="Delete"
           >
@@ -265,6 +248,16 @@ export function EditableBlock({
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete section?"
+        description={`Delete ${getComponentDisplayName(component.type)}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={onDelete}
+      />
 
       {/* Order Badge - Bottom Left */}
       <div

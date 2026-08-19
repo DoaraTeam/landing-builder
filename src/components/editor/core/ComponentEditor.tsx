@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ComponentConfig, HeaderConfig } from "@/types/landing";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,10 @@ import { ensureAnimation } from "@/lib/animation-defaults";
 import { SubPage } from "@/types/landing";
 
 interface ComponentEditorProps {
-  component: ComponentConfig;
+  // null while closed. Kept in the tree (parent no longer conditionally
+  // mounts this component) so the panel can play its close transition
+  // instead of vanishing instantly.
+  component: ComponentConfig | null;
   onUpdate: (config: ComponentConfig) => void;
   onClose: () => void;
   // Additional props for link selection
@@ -47,7 +51,7 @@ interface ComponentEditorProps {
  * Shows 3 tabs: Content, Layout, Style
  */
 export function ComponentEditor({
-  component,
+  component: incomingComponent,
   onUpdate,
   onClose,
   allComponents = [],
@@ -56,9 +60,25 @@ export function ComponentEditor({
   isMultiPage = false,
   onDirtyChange,
 }: ComponentEditorProps) {
+  // Caches the last non-null component so the panel keeps showing its fields
+  // while sliding closed, instead of blanking out the instant the parent
+  // deselects. Cleared (unmounting the panel's content) shortly after the
+  // close transition finishes.
+  const [component, setComponent] = useState<ComponentConfig | null>(incomingComponent);
+  const isOpen = incomingComponent !== null;
+
+  useEffect(() => {
+    if (incomingComponent) {
+      setComponent(incomingComponent);
+    } else {
+      const timer = setTimeout(() => setComponent(null), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [incomingComponent]);
+
   // Use Record<string, unknown> to allow flexible property access for different component types
   const [config, setConfig] = useState<Record<string, unknown>>(
-    component.config as Record<string, unknown>
+    (component?.config as Record<string, unknown>) ?? {}
   );
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
@@ -66,7 +86,7 @@ export function ComponentEditor({
 
   // Whether local edits differ from the last-saved config, so closing the
   // panel can warn before silently discarding them.
-  const isDirty = JSON.stringify(config) !== JSON.stringify(component.config);
+  const isDirty = !!component && JSON.stringify(config) !== JSON.stringify(component.config);
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -91,6 +111,7 @@ export function ComponentEditor({
 
   // Sync local state when component changes (when user clicks different section)
   useEffect(() => {
+    if (!component) return;
     setIsLoading(true);
 
     // Ensure component has animation config
@@ -118,7 +139,7 @@ export function ComponentEditor({
     const timer = setTimeout(() => setIsLoading(false), 100);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [component.id, component.type, component.config]);
+  }, [component?.id, component?.type, component?.config]);
 
   const handleChange = (path: string, value: unknown) => {
     const keys = path.split(".");
@@ -135,6 +156,7 @@ export function ComponentEditor({
   };
 
   const handleSave = () => {
+    if (!component) return;
     onUpdate({ ...component, config });
   };
 
@@ -151,17 +173,38 @@ export function ComponentEditor({
     return icons[type] || "📦";
   };
 
+  // Nothing has ever been selected yet — no need to mount anything.
+  if (!component) return null;
+
   return (
     <>
       {/* Backdrop — clicking outside the panel closes it (through the same
           unsaved-changes guard as the X/Cancel buttons) */}
       <div
-        className="fixed inset-0 z-[998] bg-black/20"
+        className={cn(
+          // A plain opacity transition (not a keyframe animation) so that
+          // clicking close mid-open reverses smoothly from wherever the
+          // fade currently is, instead of restarting from a fixed keyframe.
+          "fixed inset-0 z-[998] bg-black/80 transition-opacity duration-300",
+          isOpen ? "opacity-100" : "opacity-0"
+        )}
         onClick={handleRequestClose}
         aria-hidden="true"
       />
 
-      <div className="fixed left-0 top-0 h-full w-full md:w-96 bg-white border-r border-gray-200 shadow-2xl flex flex-col z-[999]">
+      <div
+        className={cn(
+          // A plain transform transition (not a keyframe animation): CSS
+          // keyframe animations (animate-in/animate-out) always play from a
+          // fixed 0%/100% reference regardless of current position, so
+          // closing before the open animation finished caused a visible snap
+          // back to "fully open" before it slid out. A transition instead
+          // interpolates from the actual current position, so interrupting
+          // it mid-flight reverses smoothly with no jerk.
+          "fixed right-0 top-0 h-full w-full md:w-[36rem] bg-white border-l border-gray-200 shadow-2xl flex flex-col z-[999] transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
           <div className="flex items-center gap-2">
