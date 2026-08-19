@@ -56,7 +56,7 @@ export default async function PreviewPage() {
     }
 
     // Get theme
-    const theme = getTheme(page.theme || "modern");
+    const theme = getTheme(page.theme || "modern", config.themes);
 
     // Check if multi-page (either by flag or presence of subPages)
     const isMultiPage = page.isMultiPage || (page.subPages && page.subPages.length > 0);
@@ -71,7 +71,7 @@ export default async function PreviewPage() {
             look when published
           </div>
           <div style={{ marginTop: "40px" }}>
-            <MultiPageRenderer page={page} />
+            <MultiPageRenderer page={page} customThemes={config.themes} />
           </div>
         </>
       );

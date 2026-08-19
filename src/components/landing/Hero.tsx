@@ -1,12 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme, HeroConfig } from "@/types/landing";
 import { Button } from "@/components/ui/button";
-import { useEditMode } from "@/contexts/EditModeContext";
 import { getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
 import { getLayoutClasses } from "@/lib/layout-utils";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface HeroProps {
   config: HeroConfig;
@@ -14,7 +13,6 @@ interface HeroProps {
 }
 
 export function Hero({ config, theme }: HeroProps) {
-  const { isEditMode, sidebarOpen } = useEditMode();
   const {
     title,
     subtitle,
@@ -72,11 +70,7 @@ export function Hero({ config, theme }: HeroProps) {
       >
         {/* Overlay for image backgrounds - handled in getBackgroundStyle */}
 
-        <div
-          className={`relative z-10 flex flex-col ${layout.alignment} ${
-            isEditMode && sidebarOpen ? "px-4 mx-auto max-w-none" : layout.container
-          }`}
-        >
+        <div className={`relative z-10 flex flex-col ${layout.alignment} ${layout.container}`}>
           {/* Subtitle */}
           {subtitle && (
             <div
@@ -152,7 +146,14 @@ export function Hero({ config, theme }: HeroProps) {
           {/* Hero Image */}
           {image && (
             <div className="mt-12 w-full max-w-5xl">
-              <img src={image} alt={title} className="w-full h-auto rounded-lg shadow-2xl" />
+              <SmartImage
+                src={image}
+                alt={title}
+                width={1024}
+                height={576}
+                className="w-full h-auto rounded-lg shadow-2xl"
+                priority
+              />
             </div>
           )}
         </div>

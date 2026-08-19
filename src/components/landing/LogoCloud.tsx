@@ -1,8 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme } from "@/types/landing";
 import { BackgroundConfig, getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
+import { SmartImage } from "@/components/ui/smart-image";
 import { motion } from "framer-motion";
 import { useStaggerAnimation } from "@/hooks/use-scroll-animation";
 import { useEditMode } from "@/contexts/EditModeContext";
@@ -220,9 +220,11 @@ export function LogoCloud({ config }: LogoCloudProps) {
                         rel="noopener noreferrer"
                         className="flex items-center justify-center w-full h-full"
                       >
-                        <img
+                        <SmartImage
                           src={logo.url}
                           alt={logo.name}
+                          width={200}
+                          height={80}
                           className={`${logoSizeClass} max-w-full w-auto object-contain ${grayscale ? "grayscale hover:grayscale-0" : ""} transition-all duration-300`}
                           style={{ opacity: grayscale ? logoOpacity / 100 : 0.9 }}
                           onError={(e) => {
@@ -233,9 +235,11 @@ export function LogoCloud({ config }: LogoCloudProps) {
                         />
                       </a>
                     ) : (
-                      <img
+                      <SmartImage
                         src={logo.url}
                         alt={logo.name}
+                        width={200}
+                        height={80}
                         className={`${logoSizeClass} max-w-full w-auto object-contain ${grayscale ? "grayscale" : ""} transition-all duration-300`}
                         style={{ opacity: grayscale ? logoOpacity / 100 : 0.9 }}
                         onError={(e) => {
@@ -268,9 +272,11 @@ export function LogoCloud({ config }: LogoCloudProps) {
                           rel="noopener noreferrer"
                           className="flex items-center justify-center w-full h-full"
                         >
-                          <img
+                          <SmartImage
                             src={logo.url}
                             alt={logo.name}
+                            width={200}
+                            height={80}
                             className={`${logoSizeClass} w-auto object-contain ${grayscale ? "grayscale hover:grayscale-0" : ""} transition-all duration-300`}
                             style={{ opacity: grayscale ? logoOpacity / 100 : 0.9 }}
                             onError={(e) => {
@@ -281,9 +287,11 @@ export function LogoCloud({ config }: LogoCloudProps) {
                           />
                         </a>
                       ) : (
-                        <img
+                        <SmartImage
                           src={logo.url}
                           alt={logo.name}
+                          width={200}
+                          height={80}
                           className={`${logoSizeClass} w-auto object-contain ${grayscale ? "grayscale" : ""} transition-all duration-300`}
                           style={{ opacity: grayscale ? logoOpacity / 100 : 0.9 }}
                           onError={(e) => {

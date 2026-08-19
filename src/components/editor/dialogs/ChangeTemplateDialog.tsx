@@ -7,12 +7,12 @@ import {
   ComponentVariant,
 } from "@/components/editor/data/component-templates-data";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 
@@ -52,17 +52,17 @@ export function ChangeTemplateDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col z-[999]">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full sm:max-w-3xl flex flex-col">
+        <SheetHeader className="flex-shrink-0">
+          <SheetTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5 text-purple-600" />
             Change Template - {category.name}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Select a different template variant for this component. Your content (text, images,
             etc.) will be preserved and adapted to the new template layout.
-          </DialogDescription>
+          </SheetDescription>
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>✓ What will be preserved:</strong> Title, description, images, buttons, lists
@@ -73,7 +73,7 @@ export function ChangeTemplateDialog({
               positioning to match the new template.
             </p>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
         <div className="flex-1 overflow-y-auto pr-4 min-h-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -140,7 +140,7 @@ export function ChangeTemplateDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

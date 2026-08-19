@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme, FooterConfig } from "@/types/landing";
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Github } from "lucide-react";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface FooterProps {
   config: FooterConfig;
@@ -72,7 +72,13 @@ export function Footer({ config }: FooterProps) {
               {logo && (
                 <div className="mb-4">
                   {logo.image ? (
-                    <img src={logo.image} alt={logo.text || "Logo"} className="h-8" />
+                    <SmartImage
+                      src={logo.image}
+                      alt={logo.text || "Logo"}
+                      width={160}
+                      height={32}
+                      className="h-8 w-auto"
+                    />
                   ) : logo.text ? (
                     <div className="text-xl font-bold" style={{ color: finalTextColor }}>
                       {logo.text}

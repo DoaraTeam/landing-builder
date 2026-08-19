@@ -1,8 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme, AnimationConfig } from "@/types/landing";
 import { Card, CardContent } from "@/components/ui/card";
+import { SmartImage } from "@/components/ui/smart-image";
 import { motion } from "framer-motion";
 import { useStaggerAnimation } from "@/hooks/use-scroll-animation";
 import { ensureAnimation } from "@/lib/animation-defaults";
@@ -116,16 +116,18 @@ export function Team({ config, theme }: TeamProps) {
           animate={stagger.animate}
           ref={stagger.ref}
         >
-          {members.map((member) => (
-            <motion.div key={member.id} variants={stagger.itemVariants}>
+          {members.map((member, index) => (
+            <motion.div key={member.id || `member-${index}`} variants={stagger.itemVariants}>
               <Card className="border-none shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
                 <CardContent className="p-0">
                   {/* Member Image */}
                   <div className="relative overflow-hidden aspect-square">
-                    <img
+                    <SmartImage
                       src={member.image}
                       alt={member.name}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                      fill
+                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-300 hover:scale-110"
                     />
                   </div>
 

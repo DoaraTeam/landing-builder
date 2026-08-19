@@ -18,6 +18,7 @@ export function LandingPageEditor({ pageId }: LandingPageEditorProps) {
   const [page, setPage] = useState<LandingPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -123,7 +124,15 @@ export function LandingPageEditor({ pageId }: LandingPageEditorProps) {
 
   // Use MultiPageEditor if page is multi-page
   if (page.isMultiPage) {
-    return <MultiPageEditor page={page} config={config} onSave={handleSave} />;
+    return (
+      <MultiPageEditor
+        page={page}
+        config={config}
+        onSave={handleSave}
+        sidebarCollapsed={sidebarCollapsed}
+        onSidebarCollapsedChange={setSidebarCollapsed}
+      />
+    );
   }
 
   return <EditableLandingPage page={page} theme={theme} config={config} onSave={handleSave} />;

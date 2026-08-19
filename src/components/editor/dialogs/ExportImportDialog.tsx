@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Download, Upload, FileJson, Copy, Check, FileCode } from "lucide-react"
 import { ComponentConfig, SubPage } from "@/types/landing";
 import { ExportImportManager } from "@/lib/export-import";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 
 interface ExportImportDialogProps {
   isOpen: boolean;
@@ -39,6 +40,10 @@ export function ExportImportDialog({
   const [templateDescription, setTemplateDescription] = useState("");
   const [copied, setCopied] = useState(false);
   const [exportFormat, setExportFormat] = useState<"json" | "html">("json");
+  const [confirmReplace, setConfirmReplace] = useState<{
+    description: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const handleExport = () => {
     const metadata = {
@@ -70,7 +75,7 @@ export function ExportImportDialog({
 
       ExportImportManager.downloadAsFile(components, filename, metadata);
 
-      toast({
+      toast.success({
         title: "Template exported",
         description: `Downloaded as ${filename}`,
       });
@@ -95,7 +100,7 @@ export function ExportImportDialog({
 
         ExportImportManager.exportMultiPageHTML(pages, projectName);
 
-        toast({
+        toast.success({
           title: "Multi-page HTML exported",
           description: `Downloaded ${pages.length} pages as ${projectName}.zip`,
         });
@@ -106,7 +111,7 @@ export function ExportImportDialog({
 
         ExportImportManager.downloadAsHTML(components, filename, metadata);
 
-        toast({
+        toast.success({
           title: "HTML exported",
           description: `Downloaded as ${filename}`,
         });
@@ -127,15 +132,14 @@ export function ExportImportDialog({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
 
-      toast({
+      toast.success({
         title: "Copied to clipboard",
         description: `${exportFormat.toUpperCase()} code copied successfully`,
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Copy failed",
         description: "Failed to copy to clipboard",
-        variant: "destructive",
       });
     }
   };
@@ -148,43 +152,48 @@ export function ExportImportDialog({
       const result = await ExportImportManager.importFromFile(file);
       setImportData(JSON.stringify(result, null, 2));
 
-      toast({
+      toast.success({
         title: "File loaded",
         description: "Template file loaded successfully. Click Import to apply.",
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Import failed",
         description: error instanceof Error ? error.message : "Failed to import template",
-        variant: "destructive",
       });
     }
   };
 
   const handleImportFromText = async () => {
     if (!importData.trim()) {
-      toast({
+      toast.warning({
         title: "No data",
         description: "Please paste template data or upload a file",
-        variant: "destructive",
       });
       return;
     }
 
+    // Parse/validate first so the confirmation shows accurate counts instead
+    // of asking to confirm something that then fails on bad JSON anyway.
     try {
       const result = await ExportImportManager.import(importData);
-      onImport(result.components);
-      onClose();
 
-      toast({
-        title: "Import successful",
-        description: `Imported ${result.components.length} components`,
+      setConfirmReplace({
+        description: `This will replace all ${components.length} current component(s) with ${result.components.length} imported component(s). This cannot be undone.`,
+        onConfirm: () => {
+          onImport(result.components);
+          onClose();
+
+          toast.success({
+            title: "Import successful",
+            description: `Imported ${result.components.length} components`,
+          });
+        },
       });
     } catch (error) {
-      toast({
+      toast.error({
         title: "Import failed",
         description: error instanceof Error ? error.message : "Failed to import template",
-        variant: "destructive",
       });
     }
   };
@@ -192,191 +201,208 @@ export function ExportImportDialog({
   const handleUsePreset = (
     preset: ReturnType<typeof ExportImportManager.getPresetTemplates>[0]
   ) => {
-    onImport(preset.components);
-    onClose();
+    setConfirmReplace({
+      description: `This will replace all ${components.length} current component(s) with the "${preset.metadata?.title}" template (${preset.components.length} component(s)). This cannot be undone.`,
+      onConfirm: () => {
+        onImport(preset.components);
+        onClose();
 
-    toast({
-      title: "Template applied",
-      description: `Applied "${preset.metadata?.title}" template`,
+        toast.success({
+          title: "Template applied",
+          description: `Applied "${preset.metadata?.title}" template`,
+        });
+      },
     });
   };
 
   const presets = ExportImportManager.getPresetTemplates();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Import / Export Templates</DialogTitle>
-        </DialogHeader>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Import / Export Templates</SheetTitle>
+          </SheetHeader>
 
-        <Tabs defaultValue="export" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="export">Export</TabsTrigger>
-            <TabsTrigger value="import">Import</TabsTrigger>
-            <TabsTrigger value="presets">Presets</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="export" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="export">Export</TabsTrigger>
+              <TabsTrigger value="import">Import</TabsTrigger>
+              <TabsTrigger value="presets">Presets</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="export" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="template-name">Template Name</Label>
-                <Input
-                  id="template-name"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="My Landing Page Template"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="template-description">Description</Label>
-                <Input
-                  id="template-description"
-                  value={templateDescription}
-                  onChange={(e) => setTemplateDescription(e.target.value)}
-                  placeholder="A brief description of this template"
-                />
-              </div>
-
-              <div>
-                <Label>Export Format</Label>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant={exportFormat === "json" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setExportFormat("json");
-                      setExportData("");
-                      setExportHTML("");
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <FileJson className="h-4 w-4" />
-                    JSON
-                  </Button>
-                  <Button
-                    variant={exportFormat === "html" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setExportFormat("html");
-                      setExportData("");
-                      setExportHTML("");
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <FileCode className="h-4 w-4" />
-                    HTML
-                  </Button>
+            <TabsContent value="export" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="template-name">Template Name</Label>
+                  <Input
+                    id="template-name"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="My Landing Page Template"
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {exportFormat === "json"
-                    ? "Export as JSON configuration (can be imported back)"
-                    : "Export as standalone HTML file (ready to deploy)"}
-                </p>
-              </div>
 
-              <div className="flex gap-2">
-                <Button onClick={handleDownload} className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Download {exportFormat.toUpperCase()}
-                </Button>
-                <Button variant="outline" onClick={handleExport}>
-                  {exportFormat === "json" ? (
-                    <FileJson className="h-4 w-4 mr-2" />
-                  ) : (
-                    <FileCode className="h-4 w-4 mr-2" />
-                  )}
-                  Generate Preview
-                </Button>
-              </div>
+                <div>
+                  <Label htmlFor="template-description">Description</Label>
+                  <Input
+                    id="template-description"
+                    value={templateDescription}
+                    onChange={(e) => setTemplateDescription(e.target.value)}
+                    placeholder="A brief description of this template"
+                  />
+                </div>
 
-              {(exportData || exportHTML) && (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label>Export Preview</Label>
+                <div>
+                  <Label>Export Format</Label>
+                  <div className="flex gap-2 mt-2">
                     <Button
-                      variant="outline"
+                      variant={exportFormat === "json" ? "default" : "outline"}
                       size="sm"
-                      onClick={handleCopyToClipboard}
+                      onClick={() => {
+                        setExportFormat("json");
+                        setExportData("");
+                        setExportHTML("");
+                      }}
                       className="flex items-center gap-2"
                     >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Copied!" : "Copy"}
+                      <FileJson className="h-4 w-4" />
+                      JSON
+                    </Button>
+                    <Button
+                      variant={exportFormat === "html" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setExportFormat("html");
+                        setExportData("");
+                        setExportHTML("");
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <FileCode className="h-4 w-4" />
+                      HTML
                     </Button>
                   </div>
-                  <textarea
-                    className="w-full h-64 p-2 border rounded-md font-mono text-xs"
-                    value={exportFormat === "json" ? exportData : exportHTML}
-                    readOnly
-                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {exportFormat === "json"
+                      ? "Export as JSON configuration (can be imported back)"
+                      : "Export as standalone HTML file (ready to deploy)"}
+                  </p>
                 </div>
-              )}
-            </div>
-          </TabsContent>
 
-          <TabsContent value="import" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <Label>Upload Template File</Label>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Choose File
+                  <Button onClick={handleDownload} className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Download {exportFormat.toUpperCase()}
                   </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".json"
-                    className="hidden"
+                  <Button variant="outline" onClick={handleExport}>
+                    {exportFormat === "json" ? (
+                      <FileJson className="h-4 w-4 mr-2" />
+                    ) : (
+                      <FileCode className="h-4 w-4 mr-2" />
+                    )}
+                    Generate Preview
+                  </Button>
+                </div>
+
+                {(exportData || exportHTML) && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>Export Preview</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyToClipboard}
+                        className="flex items-center gap-2"
+                      >
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copied ? "Copied!" : "Copy"}
+                      </Button>
+                    </div>
+                    <textarea
+                      className="w-full h-64 p-2 border rounded-md font-mono text-xs"
+                      value={exportFormat === "json" ? exportData : exportHTML}
+                      readOnly
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="import" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label>Upload Template File</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Choose File
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept=".json"
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="import-data">Or Paste Template JSON</Label>
+                  <textarea
+                    id="import-data"
+                    className="w-full h-32 p-2 border rounded-md font-mono text-sm"
+                    value={importData}
+                    onChange={(e) => setImportData(e.target.value)}
+                    placeholder="Paste your template JSON here..."
                   />
                 </div>
+
+                <Button onClick={handleImportFromText} className="w-full">
+                  Import Template
+                </Button>
               </div>
+            </TabsContent>
 
-              <div>
-                <Label htmlFor="import-data">Or Paste Template JSON</Label>
-                <textarea
-                  id="import-data"
-                  className="w-full h-32 p-2 border rounded-md font-mono text-sm"
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  placeholder="Paste your template JSON here..."
-                />
-              </div>
+            <TabsContent value="presets" className="space-y-4">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Choose from pre-built templates to get started quickly.
+                </p>
 
-              <Button onClick={handleImportFromText} className="w-full">
-                Import Template
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="presets" className="space-y-4">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Choose from pre-built templates to get started quickly.
-              </p>
-
-              {presets.map((preset, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-2">
-                  <h3 className="font-semibold">{preset.metadata?.title}</h3>
-                  <p className="text-sm text-muted-foreground">{preset.metadata?.description}</p>
-                  <div className="text-xs text-muted-foreground">
-                    {preset.components.length} components
+                {presets.map((preset, index) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-2">
+                    <h3 className="font-semibold">{preset.metadata?.title}</h3>
+                    <p className="text-sm text-muted-foreground">{preset.metadata?.description}</p>
+                    <div className="text-xs text-muted-foreground">
+                      {preset.components.length} components
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleUsePreset(preset)}>
+                      Use This Template
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleUsePreset(preset)}>
-                    Use This Template
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmDialog
+        open={!!confirmReplace}
+        onOpenChange={(open) => !open && setConfirmReplace(null)}
+        title="Replace all components?"
+        description={confirmReplace?.description ?? ""}
+        confirmText="Replace"
+        variant="destructive"
+        onConfirm={() => confirmReplace?.onConfirm()}
+      />
+    </>
   );
 }

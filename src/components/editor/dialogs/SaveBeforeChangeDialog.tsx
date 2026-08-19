@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Save } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SaveBeforeChangeDialogProps {
   open: boolean;
@@ -34,15 +35,17 @@ export function SaveBeforeChangeDialog({
   const [mode, setMode] = useState<"prompt" | "save">("prompt");
   const [versionName, setVersionName] = useState("");
   const [versionDescription, setVersionDescription] = useState("");
+  const [nameError, setNameError] = useState(false);
 
   const handleSaveAndContinue = () => {
     if (!versionName.trim()) {
-      alert("Please enter a version name");
+      setNameError(true);
       return;
     }
     onSaveAndContinue(versionName, versionDescription);
     setVersionName("");
     setVersionDescription("");
+    setNameError(false);
     setMode("prompt");
     onOpenChange(false);
   };
@@ -57,6 +60,7 @@ export function SaveBeforeChangeDialog({
     setMode("prompt");
     setVersionName("");
     setVersionDescription("");
+    setNameError(false);
     onOpenChange(false);
   };
 
@@ -68,6 +72,7 @@ export function SaveBeforeChangeDialog({
           setMode("prompt");
           setVersionName("");
           setVersionDescription("");
+          setNameError(false);
         }
         onOpenChange(open);
       }}
@@ -141,10 +146,16 @@ export function SaveBeforeChangeDialog({
                   id="version-name"
                   placeholder="e.g., Homepage v1, Before redesign"
                   value={versionName}
-                  onChange={(e) => setVersionName(e.target.value)}
-                  className="mt-1"
+                  onChange={(e) => {
+                    setVersionName(e.target.value);
+                    if (nameError) setNameError(false);
+                  }}
+                  className={cn("mt-1", nameError && "border-red-500 focus-visible:ring-red-500")}
                   autoFocus
                 />
+                {nameError && (
+                  <p className="text-xs text-red-600 mt-1">Please enter a version name</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="version-description">Description (Optional)</Label>

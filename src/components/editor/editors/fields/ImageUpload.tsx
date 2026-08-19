@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface ImageUploadProps {
   value?: string;
@@ -39,20 +40,18 @@ export function ImageUpload({
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast({
+      toast.warning({
         title: "Invalid File",
         description: "Please select an image file",
-        variant: "destructive",
       });
       return;
     }
 
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast({
+      toast.warning({
         title: "File Too Large",
         description: "Image must be less than 10MB",
-        variant: "destructive",
       });
       return;
     }
@@ -79,16 +78,15 @@ export function ImageUpload({
       setPreview(data.url);
       onChange(data.url);
 
-      toast({
+      toast.success({
         title: "Success",
         description: "Image uploaded successfully",
       });
     } catch (error) {
       console.error("Upload error:", error);
-      toast({
+      toast.error({
         title: "Upload Failed",
         description: "Failed to upload image. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -126,14 +124,20 @@ export function ImageUpload({
                 onClick={() => {
                   setPreview(logo.url);
                   onChange(logo.url);
-                  toast({
+                  toast.success({
                     title: "Logo Selected",
                     description: `${logo.name} logo selected`,
                   });
                 }}
                 className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 transition-all flex flex-col items-center gap-1 group"
               >
-                <img src={logo.url} alt={logo.name} className="h-8 w-auto object-contain" />
+                <SmartImage
+                  src={logo.url}
+                  alt={logo.name}
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                />
                 <span className="text-xs text-gray-600 group-hover:text-blue-600 font-medium">
                   {logo.name}
                 </span>
@@ -148,8 +152,8 @@ export function ImageUpload({
 
       <div className="space-y-2">
         {preview ? (
-          <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-            <img src={preview} alt="Preview" className="w-full h-48 object-cover" />
+          <div className="relative h-48 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+            <SmartImage src={preview} alt="Preview" fill sizes="400px" className="object-cover" />
             <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
               <Button
                 type="button"
@@ -231,7 +235,7 @@ export function ImageUpload({
                   onClick={() => {
                     setPreview(logo.url);
                     onChange(logo.url);
-                    toast({
+                    toast.success({
                       title: "Logo Changed",
                       description: `Switched to ${logo.name} logo`,
                     });
@@ -240,7 +244,13 @@ export function ImageUpload({
                     preview === logo.url ? "border-blue-500 bg-blue-50" : "border-gray-200"
                   }`}
                 >
-                  <img src={logo.url} alt={logo.name} className="h-6 w-auto object-contain" />
+                  <SmartImage
+                    src={logo.url}
+                    alt={logo.name}
+                    width={100}
+                    height={24}
+                    className="h-6 w-auto object-contain"
+                  />
                   <span className="text-[10px] text-gray-600">{logo.name}</span>
                 </button>
               ))}

@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, GripVertical, Facebook, Twitter, Linkedin, Github } from "lucide-react";
+import { Plus, Trash2, Facebook, Twitter, Linkedin, Github } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkSelector } from "@/components/editor/editors/fields/LinkSelector";
 import { ComponentConfig, SubPage } from "@/types/landing";
+import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 
 interface FooterLink {
   text: string;
@@ -42,6 +43,11 @@ interface FooterLinksEditorProps {
   pageSlug?: string;
 }
 
+type PendingDelete =
+  | { type: "group"; groupIndex: number }
+  | { type: "link"; groupIndex: number; linkIndex: number }
+  | { type: "social"; index: number };
+
 const socialIcons = {
   facebook: Facebook,
   twitter: Twitter,
@@ -57,6 +63,7 @@ export function FooterLinksEditor({
   pageSlug,
 }: FooterLinksEditorProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const handleUpdateLinkGroup = (index: number, updates: Partial<FooterLinkGroup>) => {
     const updatedLinks = (footerConfig.links || []).map((group, i) =>
@@ -76,12 +83,7 @@ export function FooterLinksEditor({
   };
 
   const handleDeleteLinkGroup = (index: number) => {
-    if (confirm("Delete this link group?")) {
-      onChange({
-        ...footerConfig,
-        links: (footerConfig.links || []).filter((_, i) => i !== index),
-      });
-    }
+    setPendingDelete({ type: "group", groupIndex: index });
   };
 
   const handleUpdateLink = (
@@ -106,10 +108,7 @@ export function FooterLinksEditor({
   };
 
   const handleDeleteLink = (groupIndex: number, linkIndex: number) => {
-    const group = (footerConfig.links || [])[groupIndex];
-    if (!group) return;
-    const updatedItems = group.items?.filter((_, i) => i !== linkIndex);
-    handleUpdateLinkGroup(groupIndex, { items: updatedItems });
+    setPendingDelete({ type: "link", groupIndex, linkIndex });
   };
 
   const handleUpdateSocial = (index: number, updates: Partial<SocialLink>) => {
@@ -130,11 +129,47 @@ export function FooterLinksEditor({
   };
 
   const handleDeleteSocial = (index: number) => {
-    onChange({
-      ...footerConfig,
-      social: (footerConfig.social || []).filter((_, i) => i !== index),
-    });
+    setPendingDelete({ type: "social", index });
   };
+
+  const confirmPendingDelete = () => {
+    if (!pendingDelete) return;
+
+    if (pendingDelete.type === "group") {
+      onChange({
+        ...footerConfig,
+        links: (footerConfig.links || []).filter((_, i) => i !== pendingDelete.groupIndex),
+      });
+    } else if (pendingDelete.type === "link") {
+      const group = (footerConfig.links || [])[pendingDelete.groupIndex];
+      if (group) {
+        const updatedItems = group.items?.filter((_, i) => i !== pendingDelete.linkIndex);
+        handleUpdateLinkGroup(pendingDelete.groupIndex, { items: updatedItems });
+      }
+    } else if (pendingDelete.type === "social") {
+      onChange({
+        ...footerConfig,
+        social: (footerConfig.social || []).filter((_, i) => i !== pendingDelete.index),
+      });
+    }
+
+    setPendingDelete(null);
+  };
+
+  const pendingDeleteCopy = (() => {
+    if (!pendingDelete) return { title: "", description: "" };
+    if (pendingDelete.type === "group") {
+      return {
+        title: "Delete link group?",
+        description:
+          "This will delete the group and all links inside it. This action cannot be undone.",
+      };
+    }
+    if (pendingDelete.type === "link") {
+      return { title: "Delete link?", description: "This action cannot be undone." };
+    }
+    return { title: "Delete social link?", description: "This action cannot be undone." };
+  })();
 
   return (
     <div className="space-y-4">
@@ -213,7 +248,6 @@ export function FooterLinksEditor({
                     )
                   }
                 >
-                  <GripVertical className="h-4 w-4 text-gray-400" />
                   <CardTitle className="text-sm font-medium">{group.title}</CardTitle>
                   <span className="text-xs text-gray-500">({group.items?.length} links)</span>
                 </div>
@@ -381,6 +415,16 @@ export function FooterLinksEditor({
           </CardContent>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+        title={pendingDeleteCopy.title}
+        description={pendingDeleteCopy.description}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={confirmPendingDelete}
+      />
     </div>
   );
 }

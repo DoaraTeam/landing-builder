@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
 import { getTheme } from "@/lib/themes";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
+import { JsonLd } from "@/components/seo/json-ld";
+import { SITE_URL } from "@/lib/site-url";
 
 interface PageProps {
   params: {
@@ -64,10 +66,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       };
     }
 
-    // Use parent page SEO config as base
+    // A sub-page with its own SEOConfig is fully independent — the user has
+    // already set title/description/robots/canonical/OG/Twitter/etc.
+    // themselves, so no fallback/override is needed.
+    if (subPage.seo) {
+      return seoConfigToMetadata(subPage.seo);
+    }
+
+    // Older sub-pages (created before per-page SEO existed) have no seo of
+    // their own — inherit the parent page's SEOConfig as a base, overridden
+    // with subpage-specific title/description, same as before.
     const baseMetadata = publishedPage.seo ? seoConfigToMetadata(publishedPage.seo) : {};
 
-    // Override with subpage specific info
     return {
       ...baseMetadata,
       title: `${subPage.title} - ${publishedPage.title}`,
@@ -121,7 +131,7 @@ export default async function SubPage({ params }: PageProps) {
     }
 
     // Get theme
-    const theme = getTheme(publishedPage.theme || "modern");
+    const theme = getTheme(publishedPage.theme || "modern", config.themes);
 
     // Sort components by order and filter visible ones
     const sortedComponents = [...subPage.components]
@@ -137,22 +147,44 @@ export default async function SubPage({ params }: PageProps) {
       minDuration: 500,
     };
 
+    const breadcrumbJsonLd = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: publishedPage.title,
+          item: `${SITE_URL}/publish`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: subPage.title,
+          item: `${SITE_URL}/${subPage.slug}`,
+        },
+      ],
+    };
+
     return (
-      <ThemeProvider theme={theme}>
-        <LandingPageLoader
-          enabled={loadingConfig.enabled}
-          type={loadingConfig.type}
-          color={loadingConfig.color || "#f97316"}
-          duration={loadingConfig.duration || 1000}
-          minDuration={loadingConfig.minDuration || 500}
-        >
-          <main className="min-h-screen">
-            {sortedComponents.map((component) => (
-              <ComponentRenderer key={component.id} component={component} theme={theme} />
-            ))}
-          </main>
-        </LandingPageLoader>
-      </ThemeProvider>
+      <>
+        <JsonLd data={breadcrumbJsonLd} />
+        <ThemeProvider theme={theme}>
+          <LandingPageLoader
+            enabled={loadingConfig.enabled}
+            type={loadingConfig.type}
+            color={loadingConfig.color || "#f97316"}
+            duration={loadingConfig.duration || 1000}
+            minDuration={loadingConfig.minDuration || 500}
+          >
+            <main className="min-h-screen">
+              {sortedComponents.map((component) => (
+                <ComponentRenderer key={component.id} component={component} theme={theme} />
+              ))}
+            </main>
+          </LandingPageLoader>
+        </ThemeProvider>
+      </>
     );
   } catch (error) {
     console.error("Error rendering sub-page:", error);

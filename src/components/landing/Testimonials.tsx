@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { motion } from "framer-motion";
 import { Theme, TestimonialsConfig } from "@/types/landing";
 import { Card, CardContent } from "@/components/ui/card";
+import { SmartImage } from "@/components/ui/smart-image";
 import { Star } from "lucide-react";
 import { useStaggerAnimation } from "@/hooks/use-scroll-animation";
 import {
@@ -67,9 +67,11 @@ export function Testimonials({ config }: TestimonialsProps) {
 
         <div className="flex items-center gap-3">
           {testimonial.avatar && (
-            <img
+            <SmartImage
               src={testimonial.avatar}
               alt={testimonial.name || testimonial.author || ""}
+              width={48}
+              height={48}
               className="w-12 h-12 rounded-full object-cover"
             />
           )}

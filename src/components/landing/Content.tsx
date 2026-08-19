@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme, AnimationConfig } from "@/types/landing";
 import { Button } from "@/components/ui/button";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface ContentConfig {
   title: string;
@@ -75,9 +75,11 @@ export function Content({ config, theme }: ContentProps) {
 
     const imageElement = (
       <div className="w-full">
-        <img
+        <SmartImage
           src={imageData.url}
           alt={imageData.alt || title}
+          width={800}
+          height={600}
           className="w-full h-auto rounded-lg shadow-lg"
         />
       </div>

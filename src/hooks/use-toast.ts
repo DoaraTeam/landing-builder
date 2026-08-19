@@ -141,7 +141,11 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
-function toast({ ...props }: Toast) {
+// Standard lifetime for the toast.success/error/warning helpers below, so
+// callers don't set (and drift on) a duration per call site.
+const DEFAULT_TOAST_DURATION = 3000;
+
+function baseToast({ ...props }: Toast) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -169,6 +173,21 @@ function toast({ ...props }: Toast) {
     update,
   };
 }
+
+type ToastHelperProps = Omit<Toast, "variant">;
+
+// toast(...) stays available for one-off cases that need a custom
+// variant/duration (e.g. a long-lived "Saving..." toast dismissed manually).
+// Everything else should go through .success/.error/.warning so the color
+// and duration for a given kind of toast can't drift between call sites.
+const toast = Object.assign(baseToast, {
+  success: (props: ToastHelperProps) =>
+    baseToast({ duration: DEFAULT_TOAST_DURATION, ...props, variant: "success" }),
+  error: (props: ToastHelperProps) =>
+    baseToast({ duration: DEFAULT_TOAST_DURATION, ...props, variant: "destructive" }),
+  warning: (props: ToastHelperProps) =>
+    baseToast({ duration: DEFAULT_TOAST_DURATION, ...props, variant: "warning" }),
+});
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
