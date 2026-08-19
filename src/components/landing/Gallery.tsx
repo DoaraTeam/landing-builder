@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
 import { Theme, AnimationConfig } from "@/types/landing";
 import { BackgroundConfig, getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
+import { SmartImage } from "@/components/ui/smart-image";
 import { motion } from "framer-motion";
 import { useStaggerAnimation } from "@/hooks/use-scroll-animation";
 import { ensureAnimation } from "@/lib/animation-defaults";
@@ -133,18 +133,20 @@ export function Gallery({ config }: GalleryProps) {
             ref={stagger.ref}
           >
             {items && items.length > 0 ? (
-              items.map((item) => (
+              items.map((item, index) => (
                 <motion.div
-                  key={item.id}
+                  key={item.id || `gallery-${index}`}
                   className="relative group overflow-hidden rounded-lg cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 bg-white"
                   onClick={() => setSelectedImage(item)}
                   variants={stagger.itemVariants}
                 >
-                  <div className={`${aspectRatioClass[aspectRatio]} overflow-hidden`}>
-                    <img
+                  <div className={`relative ${aspectRatioClass[aspectRatio]} overflow-hidden`}>
+                    <SmartImage
                       src={item.image}
                       alt={item.title || "Gallery item"}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
@@ -200,6 +202,11 @@ export function Gallery({ config }: GalleryProps) {
             </svg>
           </button>
           <div className="max-w-6xl max-h-[90vh] overflow-hidden">
+            {/* Lightbox shows the image at its natural size with no fixed
+                box to size against, and only renders after a click (never
+                part of initial page load) — not worth forcing into
+                next/image's width/height or fill constraints. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={selectedImage.image}
               alt={selectedImage.title || "Gallery item"}

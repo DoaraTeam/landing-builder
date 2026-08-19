@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Theme, HeroConfig } from "@/types/landing";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
 import { getLayoutClasses } from "@/lib/layout-utils";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface HeroProps {
   config: HeroConfig;
@@ -146,7 +146,14 @@ export function Hero({ config, theme }: HeroProps) {
           {/* Hero Image */}
           {image && (
             <div className="mt-12 w-full max-w-5xl">
-              <img src={image} alt={title} className="w-full h-auto rounded-lg shadow-2xl" />
+              <SmartImage
+                src={image}
+                alt={title}
+                width={1024}
+                height={576}
+                className="w-full h-auto rounded-lg shadow-2xl"
+                priority
+              />
             </div>
           )}
         </div>

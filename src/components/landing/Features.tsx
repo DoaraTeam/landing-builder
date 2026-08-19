@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { motion } from "framer-motion";
 import { Theme, FeaturesConfig } from "@/types/landing";
 import { getBackgroundStyle, isBackgroundDark } from "@/lib/background-utils";
+import { SmartImage } from "@/components/ui/smart-image";
 import { getLayoutClasses } from "@/lib/layout-utils";
 import { useStaggerAnimation } from "@/hooks/use-scroll-animation";
 import {
@@ -101,8 +101,11 @@ export function Features({ config }: FeaturesProps) {
             className="w-full max-w-5xl mx-auto"
           >
             <CarouselContent>
-              {features.map((feature) => (
-                <CarouselItem key={feature.id} className="md:basis-1/2 lg:basis-1/3">
+              {features.map((feature, index) => (
+                <CarouselItem
+                  key={feature.id || `feature-${index}`}
+                  className="md:basis-1/2 lg:basis-1/3"
+                >
                   <div className="p-1 h-full">
                     <div
                       className="group relative bg-white dark:bg-gray-800 rounded-xl p-6 hover:shadow-lg transition-all duration-300 h-full"
@@ -113,11 +116,13 @@ export function Features({ config }: FeaturesProps) {
                     >
                       {/* Feature Image */}
                       {feature.image && (
-                        <div className="mb-5 -mx-6 -mt-6 overflow-hidden rounded-t-xl">
-                          <img
+                        <div className="relative mb-5 -mx-6 -mt-6 h-40 overflow-hidden rounded-t-xl">
+                          <SmartImage
                             src={feature.image}
                             alt={feature.title}
-                            className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       )}
@@ -161,9 +166,9 @@ export function Features({ config }: FeaturesProps) {
             variants={stagger.containerVariants}
             className={`grid ${layout.grid} gap-6`}
           >
-            {features.map((feature) => (
+            {features.map((feature, index) => (
               <motion.div
-                key={feature.id}
+                key={feature.id || `feature-${index}`}
                 variants={{
                   hidden: { opacity: 0, y: 20 },
                   visible: {
@@ -183,11 +188,13 @@ export function Features({ config }: FeaturesProps) {
               >
                 {/* Feature Image */}
                 {feature.image && (
-                  <div className="mb-5 -mx-6 -mt-6 overflow-hidden rounded-t-xl">
-                    <img
+                  <div className="relative mb-5 -mx-6 -mt-6 h-40 overflow-hidden rounded-t-xl">
+                    <SmartImage
                       src={feature.image}
                       alt={feature.title}
-                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
                 )}

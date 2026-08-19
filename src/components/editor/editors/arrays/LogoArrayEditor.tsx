@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, GripVertical, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
+import { SmartImage } from "@/components/ui/smart-image";
 import {
   DndContext,
   closestCenter,
@@ -217,11 +218,13 @@ function SortableLogoRow({
         </div>
 
         {/* Logo Preview */}
-        <div className="w-12 h-8 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-          <img
+        <div className="relative w-12 h-8 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <SmartImage
             src={logo.url}
             alt={logo.name}
-            className="max-w-full max-h-full object-contain"
+            fill
+            sizes="48px"
+            className="object-contain"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.onerror = null; // Prevent infinite loop
@@ -320,11 +323,13 @@ function SortableLogoRow({
           {/* Image Preview */}
           <div className="space-y-2">
             <Label className="text-xs">Preview</Label>
-            <div className="w-full h-20 bg-gray-50 rounded border border-gray-200 flex items-center justify-center p-4">
-              <img
+            <div className="relative w-full h-20 bg-gray-50 rounded border border-gray-200 p-4">
+              <SmartImage
                 src={logo.url}
                 alt={logo.name}
-                className="max-h-full max-w-full object-contain"
+                fill
+                sizes="400px"
+                className="object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = `https://via.placeholder.com/150x50/cccccc/666666?text=${encodeURIComponent(logo.name || "Logo")}`;

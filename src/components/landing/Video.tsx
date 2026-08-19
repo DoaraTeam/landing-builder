@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
 import { Theme } from "@/types/landing";
 import { AnimatedSection } from "@/components/landing/AnimatedSection";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface VideoConfig {
   title?: string;
@@ -139,10 +139,12 @@ export function Video({ config }: VideoProps) {
                 className={`relative ${aspectRatioClass[aspectRatio]} cursor-pointer group`}
                 onClick={() => setPlaying(true)}
               >
-                <img
+                <SmartImage
                   src={thumbnail}
                   alt={title || "Video thumbnail"}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
                 />
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
