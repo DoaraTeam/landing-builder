@@ -707,8 +707,8 @@ export interface LandingPage {
   createdAt?: string;
   updatedAt?: string;
   status?: "draft" | "published" | "archived";
-  // Multi-page support
-  isMultiPage?: boolean;
+  // Multi-page support. Whether a page "is" multi-page is derived from
+  // whether subPages is non-empty — there's no separate stored flag.
   subPages?: SubPage[];
   navigation?: PageNavigation;
 }
@@ -734,16 +734,43 @@ export interface LandingPageVersion {
 }
 
 /**
- * Published/Draft state for landing page
+ * A single page's full record: every page has its own draft/published split
+ * and version history (versions live separately, keyed by this entry's id —
+ * see landing-config-store.ts), unified across what used to be the legacy
+ * `pages` map (flat, always-live) and the `currentLanding` singleton
+ * (draft/published/versions, but only ever one site).
  */
-export interface PublishedLandingState {
-  draft: LandingPage | null;
+export interface PageEntry {
+  id: string;
+  // The project/site's own identity — independent of `draft.title`, which is
+  // just the *main page's* own title (same kind of thing a sub-page's title
+  // is). Renaming the project never touches draft/published content, so it
+  // needs no save-then-publish cycle.
+  name: string;
+  draft: LandingPage;
   published: LandingPage | null;
   publishedAt?: string;
-  // Version history
-  versions?: LandingPageVersion[];
   // Track which version is currently being edited (if any)
   activeVersionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Lightweight projection of a PageEntry for the /pages dashboard grid — no
+ * component trees, so listing every page doesn't require shipping their full
+ * content.
+ */
+export interface PageSummary {
+  id: string;
+  title: string;
+  description: string;
+  slug: string;
+  isMultiPage: boolean;
+  status?: LandingPage["status"];
+  createdAt: string;
+  updatedAt: string;
+  isPublished: boolean;
 }
 
 /**
@@ -753,10 +780,11 @@ export interface LandingConfig {
   version: string;
   metadata: Metadata;
   themes: Record<string, Theme>;
-  pages: Record<string, LandingPage>; // Legacy: Keep for backward compatibility
+  // Every page is equal — each gets its own public route at its own slug.
+  // Which real-world domain points at which page's slug is entirely up to
+  // whoever deploys this app; not this app's concern.
+  pages: Record<string, PageEntry>;
   navigation?: Navigation;
-  // New: Single landing page with draft/published state
-  currentLanding?: PublishedLandingState;
 }
 
 // ========================
