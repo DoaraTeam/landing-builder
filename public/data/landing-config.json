@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "metadata": {
-    "lastUpdated": "2026-08-20T06:14:58.272Z",
+    "lastUpdated": "2026-08-20T14:27:43.054Z",
     "totalPages": 10,
     "version": "1.0.0"
   },
@@ -66,6 +66,24 @@
         "primary": "#DC2626",
         "secondary": "#991B1B",
         "accent": "#FBBF24",
+        "background": "#FFFFFF",
+        "surface": "#F9FAFB",
+        "text": "#111827",
+        "textMuted": "#6B7280"
+      },
+      "fonts": {
+        "heading": "Inter, system-ui, sans-serif",
+        "body": "Inter, system-ui, sans-serif"
+      },
+      "borderRadius": "0.5rem",
+      "shadows": "modern"
+    },
+    "my-custom-theme-1787231949719": {
+      "name": "My Custom Theme",
+      "colors": {
+        "primary": "#9333EA",
+        "secondary": "#7C3AED",
+        "accent": "#C084FC",
         "background": "#FFFFFF",
         "surface": "#F9FAFB",
         "text": "#111827",
@@ -3848,7 +3866,7 @@
         "title": "Modern Businesses",
         "description": "",
         "slug": "modern-business-5",
-        "theme": "modern",
+        "theme": "minimal",
         "status": "draft",
         "seo": {
           "metaTitle": "Modern Business",
@@ -3857,46 +3875,6 @@
           "ogImage": ""
         },
         "components": [
-          {
-            "type": "hero",
-            "visible": true,
-            "config": {
-              "title": "Transform Your Business Today",
-              "subtitle": "Innovation • Growth • Success",
-              "description": "We help businesses scale with cutting-edge solutions and expert guidance. Join thousands of satisfied clients worldwide.",
-              "primaryCTA": {
-                "text": "Get Started Free",
-                "link": "#contact",
-                "style": "primary"
-              },
-              "secondaryCTA": {
-                "text": "Watch Demo",
-                "link": "#demo",
-                "style": "secondary"
-              },
-              "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800",
-              "alignment": "center",
-              "background": {
-                "type": "solid",
-                "gradient": {
-                  "from": "#3b82f6",
-                  "to": "#8b5cf6",
-                  "direction": "to-br"
-                }
-              },
-              "animation": {
-                "type": "fadeInUp",
-                "duration": 2000,
-                "delay": 2000
-              },
-              "spacing": {
-                "padding": "2xl",
-                "margin": "none"
-              }
-            },
-            "id": "comp-1762503509604-0",
-            "order": 0
-          },
           {
             "type": "header",
             "visible": true,
@@ -3946,21 +3924,6 @@
                   "id": "comp-1762587997861-7jf353q8g",
                   "text": "Home",
                   "link": "#comp-1762587997861-7jf353q8g"
-                },
-                {
-                  "id": "subpage-1762503528091",
-                  "text": "Tin Tức",
-                  "link": "/modern-business-5/tin-t-c"
-                },
-                {
-                  "id": "subpage-1762528520952",
-                  "text": "Tinh nang",
-                  "link": "/modern-business-5/tinh-nang"
-                },
-                {
-                  "id": "subpage-1762588198361",
-                  "text": "alo",
-                  "link": "/modern-business-5/alo"
                 }
               ],
               "ctaButton": {
@@ -3982,6 +3945,46 @@
               }
             },
             "id": "comp-1762528526781-40x5min6c",
+            "order": 0
+          },
+          {
+            "type": "hero",
+            "visible": true,
+            "config": {
+              "title": "Transform Your Business Tomorrow",
+              "subtitle": "Innovation • Growth • Success",
+              "description": "We help businesses scale with cutting-edge solutions and expert guidance. Join thousands of satisfied clients worldwide.",
+              "primaryCTA": {
+                "text": "Get Started Free",
+                "link": "#contact",
+                "style": "primary"
+              },
+              "secondaryCTA": {
+                "text": "Watch Demo",
+                "link": "#demo",
+                "style": "secondary"
+              },
+              "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800",
+              "alignment": "center",
+              "background": {
+                "type": "solid",
+                "gradient": {
+                  "from": "#3b82f6",
+                  "to": "#8b5cf6",
+                  "direction": "to-br"
+                }
+              },
+              "animation": {
+                "type": "fadeInUp",
+                "duration": 2000,
+                "delay": 2000
+              },
+              "spacing": {
+                "padding": "2xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-0",
             "order": 1
           },
           {
@@ -4522,8 +4525,8 @@
         "navigation": {
           "enabled": true,
           "style": "tabs",
-          "showIcons": true,
-          "sticky": true
+          "showIcons": false,
+          "sticky": false
         },
         "loading": {
           "enabled": true,
@@ -5226,7 +5229,7 @@
       "publishedAt": "2026-08-20T02:41:14.365Z",
       "activeVersionId": null,
       "createdAt": "2025-11-07T08:18:29.604Z",
-      "updatedAt": "2026-08-20T04:53:28.552Z",
+      "updatedAt": "2026-08-20T14:27:43.054Z",
       "name": "Modern Businesses"
     },
     "page-1762507154914": {

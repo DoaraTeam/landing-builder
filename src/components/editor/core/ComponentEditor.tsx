@@ -29,6 +29,23 @@ import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 import { ensureAnimation } from "@/lib/animation-defaults";
 import { SubPage } from "@/types/landing";
 
+// Immutable nested-path set that only copies objects along the touched
+// path — unlike JSON.parse(JSON.stringify(config)), it doesn't walk/clone
+// the entire config (including untouched arrays like testimonials/features
+// or embedded base64 images) on every single field edit.
+function setNestedValue(
+  obj: Record<string, unknown>,
+  keys: string[],
+  value: unknown
+): Record<string, unknown> {
+  const [head, ...rest] = keys;
+  if (rest.length === 0) {
+    return { ...obj, [head]: value };
+  }
+  const nested = (obj[head] as Record<string, unknown>) ?? {};
+  return { ...obj, [head]: setNestedValue(nested, rest, value) };
+}
+
 interface ComponentEditorProps {
   // null while closed. Kept in the tree (parent no longer conditionally
   // mounts this component) so the panel can play its close transition
@@ -65,11 +82,22 @@ export function ComponentEditor({
   const [component, setComponent] = useState<ComponentConfig | null>(incomingComponent);
   const isOpen = incomingComponent !== null;
 
+  // Whether local edits differ from the last-saved config, so closing the
+  // panel can warn before silently discarding them. Tracked explicitly
+  // (rather than derived via JSON.stringify(config) !== JSON.stringify(
+  // component.config) on every render) since that comparison re-walks the
+  // whole config — including untouched testimonial/feature arrays or
+  // embedded base64 images — on every keystroke.
+  const [isDirty, setIsDirty] = useState(false);
+
   useEffect(() => {
     if (incomingComponent) {
       setComponent(incomingComponent);
     } else {
-      const timer = setTimeout(() => setComponent(null), 300);
+      const timer = setTimeout(() => {
+        setComponent(null);
+        setIsDirty(false);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [incomingComponent]);
@@ -81,10 +109,6 @@ export function ComponentEditor({
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("content");
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
-
-  // Whether local edits differ from the last-saved config, so closing the
-  // panel can warn before silently discarding them.
-  const isDirty = !!component && JSON.stringify(config) !== JSON.stringify(component.config);
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -132,6 +156,7 @@ export function ComponentEditor({
     }
 
     setConfig(processedConfig);
+    setIsDirty(false);
     setActiveTab("content"); // Reset to content tab when switching components
     // Brief loading state to show component switch
     const timer = setTimeout(() => setIsLoading(false), 100);
@@ -140,22 +165,14 @@ export function ComponentEditor({
   }, [component?.id, component?.type, component?.config]);
 
   const handleChange = (path: string, value: unknown) => {
-    const keys = path.split(".");
-    const newConfig = JSON.parse(JSON.stringify(config));
-    let current = newConfig;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) current[keys[i]] = {};
-      current = current[keys[i]];
-    }
-
-    current[keys[keys.length - 1]] = value;
-    setConfig(newConfig);
+    setConfig((prev) => setNestedValue(prev, path.split("."), value));
+    setIsDirty(true);
   };
 
   const handleSave = () => {
     if (!component) return;
     onUpdate({ ...component, config });
+    setIsDirty(false);
   };
 
   const getComponentIcon = (type: string) => {
@@ -646,6 +663,7 @@ export function ComponentEditor({
                         margin: "none",
                       },
                     } as never);
+                    setIsDirty(true);
                   }}
                 />
               </div>

@@ -3,27 +3,40 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Keyboard, Command } from "lucide-react";
+import { COMMON_SHORTCUTS, getShortcutKeys } from "@/hooks/use-keyboard-shortcuts";
 
 interface KeyboardShortcutsHelpProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const shortcuts = [
-  { keys: ["Ctrl", "S"], description: "Save changes" },
-  { keys: ["Ctrl", "N"], description: "Add new component" },
-  { keys: ["Ctrl", "P"], description: "Toggle preview" },
-  { keys: ["Ctrl", "↑"], description: "Move component up" },
-  { keys: ["Ctrl", "↓"], description: "Move component down" },
-  { keys: ["Delete"], description: "Delete selected component" },
-  { keys: ["Escape"], description: "Close panels/dialogs" },
-  { keys: ["Ctrl", "D"], description: "Duplicate component" },
-  { keys: ["Ctrl", "Z"], description: "Undo action" },
-  { keys: ["Ctrl", "Y"], description: "Redo action" },
-  { keys: ["Ctrl", "X"], description: "Cut selected component" },
-  { keys: ["Ctrl", "C"], description: "Copy selected component" },
-  { keys: ["Ctrl", "V"], description: "Paste component" },
-];
+// Display order — grouped page-level first, then component-editing ones.
+// Sourced from COMMON_SHORTCUTS so this list can never drift from what
+// useKeyboardShortcuts actually listens for.
+const SHORTCUT_ORDER = [
+  "NEW_PAGE",
+  "OPEN_PAGE",
+  "MAKE_A_COPY",
+  "RENAME_PAGE",
+  "SAVE",
+  "TOGGLE_PREVIEW",
+  "UNDO",
+  "REDO",
+  "CUT",
+  "COPY",
+  "PASTE",
+  "DUPLICATE",
+  "ADD_COMPONENT",
+  "MOVE_UP",
+  "MOVE_DOWN",
+  "DELETE",
+  "ESCAPE",
+] as const satisfies ReadonlyArray<keyof typeof COMMON_SHORTCUTS>;
+
+const shortcuts = SHORTCUT_ORDER.map((name) => ({
+  keys: getShortcutKeys(COMMON_SHORTCUTS[name]),
+  description: COMMON_SHORTCUTS[name].description,
+}));
 
 export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelpProps) {
   return (

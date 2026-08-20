@@ -11227,5 +11227,688 @@
       },
       "createdAt": "2026-08-20T06:14:22.239Z"
     }
+  ],
+  "page-1762503509604": [
+    {
+      "id": "version-1787236220046",
+      "name": "v2",
+      "description": "v2",
+      "page": {
+        "id": "page-1762503509604",
+        "title": "Modern Businesses",
+        "description": "",
+        "slug": "modern-business-5",
+        "theme": "minimal",
+        "status": "draft",
+        "seo": {
+          "metaTitle": "Modern Business",
+          "metaDescription": "",
+          "keywords": [],
+          "ogImage": ""
+        },
+        "components": [
+          {
+            "type": "header",
+            "visible": true,
+            "config": {
+              "logo": {
+                "type": "text",
+                "text": "Your Brand",
+                "link": "/"
+              },
+              "tabs": [
+                {
+                  "id": "comp-1762503509604-0",
+                  "text": "Home",
+                  "link": "#comp-1762503509604-0"
+                },
+                {
+                  "id": "comp-1762503509604-2",
+                  "text": "Features",
+                  "link": "#comp-1762503509604-2"
+                },
+                {
+                  "id": "comp-1762503509604-4",
+                  "text": "About",
+                  "link": "#comp-1762503509604-4"
+                },
+                {
+                  "id": "comp-1762503509604-5",
+                  "text": "Pricing",
+                  "link": "#comp-1762503509604-5"
+                },
+                {
+                  "id": "comp-1762503687086-i42gy61ii",
+                  "text": "Video",
+                  "link": "#comp-1762503687086-i42gy61ii"
+                },
+                {
+                  "id": "comp-1762503509604-6",
+                  "text": "Testimonials",
+                  "link": "#comp-1762503509604-6"
+                },
+                {
+                  "id": "comp-1762503509604-8",
+                  "text": "Get Started",
+                  "link": "#comp-1762503509604-8"
+                },
+                {
+                  "id": "comp-1762587997861-7jf353q8g",
+                  "text": "Home",
+                  "link": "#comp-1762587997861-7jf353q8g"
+                }
+              ],
+              "ctaButton": {
+                "text": "Get Started",
+                "link": "#",
+                "style": "primary"
+              },
+              "position": "sticky",
+              "transparent": false,
+              "background": {
+                "type": "solid",
+                "color": "#ffffff"
+              },
+              "spacing": {
+                "padding": "md"
+              },
+              "animation": {
+                "type": "none"
+              }
+            },
+            "id": "comp-1762528526781-40x5min6c",
+            "order": 0
+          },
+          {
+            "type": "hero",
+            "visible": true,
+            "config": {
+              "title": "Transform Your Business Tomorrow",
+              "subtitle": "Innovation • Growth • Success",
+              "description": "We help businesses scale with cutting-edge solutions and expert guidance. Join thousands of satisfied clients worldwide.",
+              "primaryCTA": {
+                "text": "Get Started Free",
+                "link": "#contact",
+                "style": "primary"
+              },
+              "secondaryCTA": {
+                "text": "Watch Demo",
+                "link": "#demo",
+                "style": "secondary"
+              },
+              "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800",
+              "alignment": "center",
+              "background": {
+                "type": "solid",
+                "gradient": {
+                  "from": "#3b82f6",
+                  "to": "#8b5cf6",
+                  "direction": "to-br"
+                }
+              },
+              "animation": {
+                "type": "fadeInUp",
+                "duration": 2000,
+                "delay": 2000
+              },
+              "spacing": {
+                "padding": "2xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-0",
+            "order": 1
+          },
+          {
+            "type": "features",
+            "visible": true,
+            "config": {
+              "title": "Powerful Features for Your Business",
+              "subtitle": "Everything you need to succeed",
+              "description": "Comprehensive solutions designed for modern businesses to streamline operations and drive growth",
+              "features": [
+                {
+                  "id": "1",
+                  "title": "Lightning Fast Performance",
+                  "description": "Experience blazing-fast load times and real-time data synchronization. Our optimized infrastructure ensures 99.9% uptime with millisecond response times.",
+                  "icon": "⚡",
+                  "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400"
+                },
+                {
+                  "id": "2",
+                  "title": "Enterprise Security",
+                  "description": "Bank-level encryption, SOC 2 Type II certified, GDPR compliant. Multi-factor authentication, role-based access control, and regular security audits keep your data safe.",
+                  "icon": "🔒",
+                  "image": "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=400"
+                },
+                {
+                  "id": "3",
+                  "title": "24/7 Expert Support",
+                  "description": "Round-the-clock support from our expert team via phone, email, and live chat. Get answers within minutes with our 99% customer satisfaction rating.",
+                  "icon": "💬",
+                  "image": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400"
+                },
+                {
+                  "id": "4",
+                  "title": "Seamless Integration",
+                  "description": "Connect with 500+ popular tools and apps. Pre-built integrations with Slack, Salesforce, HubSpot, Zapier, and more. REST API and webhooks for custom integrations.",
+                  "icon": "🔗",
+                  "image": "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400"
+                },
+                {
+                  "id": "5",
+                  "title": "Advanced Analytics",
+                  "description": "Real-time dashboards, custom reports, and predictive analytics. Track KPIs, identify trends, and make data-driven decisions with actionable insights.",
+                  "icon": "📊",
+                  "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400"
+                },
+                {
+                  "id": "6",
+                  "title": "Infinite Scalability",
+                  "description": "Scale from 10 to 10,000+ users seamlessly. Auto-scaling infrastructure, unlimited storage, and no performance degradation as your business grows.",
+                  "icon": "📈",
+                  "image": "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400"
+                }
+              ],
+              "layout": "carousel",
+              "columns": 3,
+              "background": {
+                "type": "solid",
+                "color": "#f9fafb"
+              },
+              "animation": {
+                "type": "fadeInUp",
+                "duration": 600,
+                "delay": 100
+              },
+              "spacing": {
+                "padding": "2xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-2",
+            "order": 2
+          },
+          {
+            "type": "content",
+            "visible": true,
+            "config": {
+              "title": "Built for Modern Teams",
+              "subtitle": "COLLABORATION MADE EASY",
+              "content": "Empower your team with tools designed for seamless collaboration. From project management to real-time communication, everything you need is in one place. Share files, track progress, and stay aligned with your team's goals effortlessly.",
+              "image": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800",
+              "imagePosition": "right",
+              "features": [
+                "Real-time collaboration tools",
+                "Project management dashboard",
+                "Team communication channels",
+                "File sharing and version control",
+                "Task automation workflows",
+                "Performance tracking metrics"
+              ],
+              "cta": {
+                "text": "Explore Team Features",
+                "link": "#features"
+              },
+              "background": {
+                "type": "solid",
+                "color": "#ffffff"
+              },
+              "spacing": {
+                "padding": "xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-4",
+            "order": 3
+          },
+          {
+            "type": "pricing",
+            "visible": true,
+            "config": {
+              "title": "Simple, Transparent Pricing",
+              "subtitle": "Choose the plan that's right for you",
+              "description": "No hidden fees. Cancel anytime.",
+              "plans": [
+                {
+                  "name": "Starter",
+                  "price": "$29",
+                  "period": "/month",
+                  "description": "Perfect for small businesses",
+                  "features": [
+                    "Up to 10 users",
+                    "5GB storage",
+                    "Basic support",
+                    "Email integration",
+                    "Mobile app access"
+                  ],
+                  "cta": {
+                    "text": "Start Free Trial",
+                    "link": "#signup"
+                  },
+                  "highlighted": false
+                },
+                {
+                  "name": "Professional",
+                  "price": "$79",
+                  "period": "/month",
+                  "description": "For growing teams",
+                  "features": [
+                    "Up to 50 users",
+                    "100GB storage",
+                    "Priority support",
+                    "Advanced analytics",
+                    "API access",
+                    "Custom integrations"
+                  ],
+                  "cta": {
+                    "text": "Get Started",
+                    "link": "#signup"
+                  },
+                  "highlighted": true,
+                  "badge": "Most Popular"
+                },
+                {
+                  "name": "Enterprise",
+                  "price": "$199",
+                  "period": "/month",
+                  "description": "For large organizations",
+                  "features": [
+                    "Unlimited users",
+                    "Unlimited storage",
+                    "24/7 phone support",
+                    "Dedicated account manager",
+                    "Custom development",
+                    "SLA guarantee",
+                    "On-premise deployment"
+                  ],
+                  "cta": {
+                    "text": "Contact Sales",
+                    "link": "#contact"
+                  },
+                  "highlighted": false
+                }
+              ],
+              "background": {
+                "type": "solid",
+                "color": "#ffffff"
+              },
+              "animation": {
+                "type": "fadeIn",
+                "duration": 600,
+                "delay": 0
+              },
+              "spacing": {
+                "padding": "xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-5",
+            "order": 4
+          },
+          {
+            "type": "video",
+            "visible": true,
+            "config": {
+              "title": "Watch Our Demo",
+              "description": "See how it works in 2 minutes",
+              "videoUrl": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+              "aspectRatio": "16:9",
+              "background": {
+                "type": "solid",
+                "color": "#ffffff"
+              },
+              "animation": {
+                "type": "fadeIn",
+                "duration": 700,
+                "delay": 100
+              },
+              "thumbnail": "/assets/images/image-1762528484695-xuolap4.jpg"
+            },
+            "id": "comp-1762503687086-i42gy61ii",
+            "order": 5
+          },
+          {
+            "type": "testimonials",
+            "visible": true,
+            "config": {
+              "title": "What Our Clients Say",
+              "subtitle": "CUSTOMER TESTIMONIALS",
+              "description": "Real feedback from real customers who love our platform",
+              "testimonials": [
+                {
+                  "content": "This platform has transformed how we do business. The ROI was evident within the first month! Our team productivity increased by 40% and customer satisfaction scores jumped to 98%.",
+                  "author": "Sarah Johnson",
+                  "role": "CEO",
+                  "company": "TechCorp Inc.",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=1"
+                },
+                {
+                  "content": "Outstanding support team and incredibly powerful features. The analytics dashboard alone has saved us 20 hours per week. Integration with our existing tools was seamless.",
+                  "author": "Michael Chen",
+                  "role": "Marketing Director",
+                  "company": "GrowthLabs",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=2"
+                },
+                {
+                  "content": "We've tried many solutions, but this one stands out. It's simply the best in the market. Helped us scale from 10 to 500 customers without any hiccups.",
+                  "author": "Emily Rodriguez",
+                  "role": "Product Manager",
+                  "company": "InnovateCo",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=3"
+                },
+                {
+                  "content": "The automation features have been a game-changer for us. We've reduced manual tasks by 70% and can now focus on strategic initiatives that drive growth.",
+                  "author": "David Park",
+                  "role": "Operations Manager",
+                  "company": "Global Solutions Ltd",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=10"
+                },
+                {
+                  "content": "Security and compliance were our top priorities. This platform exceeded our expectations with SOC 2 certification and comprehensive audit logs.",
+                  "author": "Lisa Anderson",
+                  "role": "CTO",
+                  "company": "Innovation Labs",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=12"
+                },
+                {
+                  "content": "Our sales team loves the mobile app and real-time notifications. Response times improved by 60% and deal closure rates are up 35%. Incredible results!",
+                  "author": "James Wilson",
+                  "role": "VP of Sales",
+                  "company": "Enterprise Systems",
+                  "rating": 5,
+                  "avatar": "https://i.pravatar.cc/150?img=15"
+                }
+              ],
+              "layout": "grid",
+              "background": {
+                "type": "solid",
+                "color": "#f9fafb"
+              },
+              "animation": {
+                "type": "fadeInUp",
+                "duration": 600,
+                "delay": 0
+              },
+              "spacing": {
+                "padding": "2xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-6",
+            "order": 6
+          },
+          {
+            "type": "cta",
+            "visible": true,
+            "config": {
+              "title": "Ready to Get Started?",
+              "description": "Join thousands of successful businesses using our platform. Start your free trial today!",
+              "primaryCTA": {
+                "text": "Start Free Trial",
+                "link": "#signup",
+                "style": "primary"
+              },
+              "secondaryCTA": {
+                "text": "Schedule Demo",
+                "link": "#demo",
+                "style": "outline"
+              },
+              "background": {
+                "type": "solid",
+                "gradient": {
+                  "from": "#3b82f6",
+                  "to": "#8b5cf6",
+                  "direction": "to-r"
+                }
+              },
+              "animation": {
+                "type": "fadeIn",
+                "duration": 600,
+                "delay": 0
+              },
+              "spacing": {
+                "padding": "xl",
+                "margin": "none"
+              }
+            },
+            "id": "comp-1762503509604-8",
+            "order": 7
+          },
+          {
+            "type": "footer",
+            "visible": true,
+            "config": {
+              "logo": {
+                "text": "YourBrand",
+                "image": ""
+              },
+              "description": "Building the future of business technology.",
+              "links": [
+                {
+                  "title": "Product",
+                  "items": [
+                    {
+                      "text": "Features",
+                      "link": "#features"
+                    },
+                    {
+                      "text": "Pricing",
+                      "link": "#pricing"
+                    },
+                    {
+                      "text": "Security",
+                      "link": "#security"
+                    },
+                    {
+                      "text": "Updates",
+                      "link": "#updates"
+                    }
+                  ]
+                },
+                {
+                  "title": "Company",
+                  "items": [
+                    {
+                      "text": "About",
+                      "link": "#about"
+                    },
+                    {
+                      "text": "Blog",
+                      "link": "#blog"
+                    },
+                    {
+                      "text": "Careers",
+                      "link": "#careers"
+                    },
+                    {
+                      "text": "Contact",
+                      "link": "#contact"
+                    }
+                  ]
+                },
+                {
+                  "title": "Resources",
+                  "items": [
+                    {
+                      "text": "Documentation",
+                      "link": "#docs"
+                    },
+                    {
+                      "text": "Help Center",
+                      "link": "#help"
+                    },
+                    {
+                      "text": "Community",
+                      "link": "#community"
+                    },
+                    {
+                      "text": "API",
+                      "link": "#api"
+                    }
+                  ]
+                }
+              ],
+              "social": [
+                {
+                  "platform": "facebook",
+                  "link": "#",
+                  "icon": "facebook"
+                },
+                {
+                  "platform": "twitter",
+                  "link": "#",
+                  "icon": "twitter"
+                },
+                {
+                  "platform": "linkedin",
+                  "link": "#",
+                  "icon": "linkedin"
+                },
+                {
+                  "platform": "github",
+                  "link": "#",
+                  "icon": "github"
+                }
+              ],
+              "copyright": "© 2024 YourBrand. All rights reserved."
+            },
+            "id": "comp-1762503509604-9",
+            "order": 8
+          },
+          {
+            "type": "hero",
+            "visible": true,
+            "config": {
+              "title": "Simple. Powerful. Effective.",
+              "subtitle": "",
+              "description": "The all-in-one solution you've been waiting for. No complexity, just results.",
+              "alignment": "center",
+              "primaryCTA": {
+                "text": "Get Started",
+                "link": "#"
+              },
+              "background": {
+                "type": "solid",
+                "color": "#ffffff"
+              },
+              "animation": {
+                "type": "fadeInUp",
+                "duration": 800,
+                "delay": 200
+              },
+              "spacing": {
+                "padding": "xl"
+              }
+            },
+            "id": "comp-1762587997861-7jf353q8g",
+            "order": 9
+          }
+        ],
+        "createdAt": "2025-11-07T08:18:29.604Z",
+        "updatedAt": "2025-11-08T08:18:20.336Z",
+        "subPages": [
+          {
+            "id": "subpage-1762503528091",
+            "title": "Tin Tức",
+            "slug": "tin-t-c",
+            "icon": "",
+            "description": "",
+            "components": [
+              {
+                "type": "features",
+                "visible": true,
+                "config": {
+                  "title": "Powerful Capabilities",
+                  "subtitle": "Built for Performance",
+                  "features": [
+                    {
+                      "id": "1",
+                      "icon": "🚀",
+                      "title": "Fast",
+                      "description": "Optimized for speed"
+                    },
+                    {
+                      "id": "2",
+                      "icon": "💪",
+                      "title": "Powerful",
+                      "description": "Enterprise features"
+                    },
+                    {
+                      "id": "3",
+                      "icon": "🎯",
+                      "title": "Precise",
+                      "description": "Pixel-perfect design"
+                    },
+                    {
+                      "id": "4",
+                      "icon": "📈",
+                      "title": "Scalable",
+                      "description": "Grows with you"
+                    }
+                  ],
+                  "columns": 4,
+                  "background": {
+                    "type": "solid",
+                    "color": "#ffffff"
+                  },
+                  "spacing": {
+                    "padding": "lg"
+                  },
+                  "animation": {
+                    "type": "fadeInUp",
+                    "duration": 600,
+                    "delay": 0
+                  }
+                },
+                "id": "comp-1762503533829-bo6iase83",
+                "order": 1
+              }
+            ],
+            "order": 0,
+            "visible": true
+          },
+          {
+            "id": "subpage-1762528520952",
+            "title": "Tinh nang",
+            "slug": "tinh-nang",
+            "icon": "",
+            "description": "",
+            "components": [],
+            "order": 1,
+            "visible": true
+          },
+          {
+            "id": "subpage-1762588198361",
+            "title": "alo",
+            "slug": "alo",
+            "icon": "",
+            "description": "",
+            "components": [],
+            "order": 2,
+            "visible": true
+          }
+        ],
+        "navigation": {
+          "enabled": true,
+          "style": "tabs",
+          "showIcons": false,
+          "sticky": false
+        },
+        "loading": {
+          "enabled": true,
+          "type": "spin",
+          "color": "#f97316",
+          "duration": 1000,
+          "minDuration": 500
+        }
+      },
+      "createdAt": "2026-08-20T14:30:20.046Z"
+    }
   ]
 }

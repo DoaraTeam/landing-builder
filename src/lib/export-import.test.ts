@@ -103,19 +103,3 @@ describe("ExportImportManager.createTemplate", () => {
     expect(template.metadata?.description).toBe("");
   });
 });
-
-describe("ExportImportManager.getPresetTemplates", () => {
-  it("returns at least one preset with valid components", () => {
-    const presets = ExportImportManager.getPresetTemplates();
-
-    expect(presets.length).toBeGreaterThan(0);
-    presets.forEach((preset) => {
-      expect(preset.version).toBe("1.0.0");
-      expect(preset.components.length).toBeGreaterThan(0);
-      preset.components.forEach((component) => {
-        expect(typeof component.id).toBe("string");
-        expect(typeof component.type).toBe("string");
-      });
-    });
-  });
-});

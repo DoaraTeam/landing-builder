@@ -154,6 +154,20 @@ export default function SEOEditor({ config, onChange, disabled = false }: SEOEdi
               disabled={disabled}
             />
           </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="favicon">Favicon</Label>
+              <InfoTooltip text="Icon hiển thị trên tab trình duyệt. Để trống để dùng mặc định." />
+            </div>
+            <Input
+              id="favicon"
+              value={typeof config.icons?.icon === "string" ? config.icons.icon : ""}
+              onChange={(e) => updateConfig({ icons: { ...config.icons, icon: e.target.value } })}
+              disabled={disabled}
+              placeholder="/favicon.ico"
+            />
+          </div>
         </TabsContent>
 
         {/* Open Graph Tab */}

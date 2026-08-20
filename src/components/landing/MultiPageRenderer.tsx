@@ -4,7 +4,10 @@ import { LandingPage, Theme } from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
+import { MultiPageNav } from "@/components/landing/MultiPageNav";
+import { CustomCode } from "@/components/landing/CustomCode";
 import { getTheme } from "@/lib/themes";
+import { cn } from "@/lib/utils";
 
 interface MultiPageRendererProps {
   page: LandingPage;
@@ -37,7 +40,15 @@ export default function MultiPageRenderer({ page, customThemes }: MultiPageRende
         duration={loadingConfig.duration || 1000}
         minDuration={loadingConfig.minDuration || 500}
       >
-        <main className="min-h-screen">
+        <CustomCode code={page.customCode} />
+        <MultiPageNav page={page} activePageId="main" theme={theme} />
+        <main
+          className={cn(
+            "min-h-screen",
+            page.navigation?.style === "sidebar" &&
+              (page.navigation.position === "right" ? "mr-64" : "ml-64")
+          )}
+        >
           {sortedComponents.map((component) => (
             <ComponentRenderer key={component.id} component={component} theme={theme} />
           ))}

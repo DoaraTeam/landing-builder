@@ -11,14 +11,29 @@ import {
 
 /**
  * GET /api/landing-config
- * Fetch the whole config (every page's draft/published + themes/mainPageId —
- * no version history, that's a separate lazy endpoint). The editor needs
- * `themes` and the full `pages` map (for slug-uniqueness checks) regardless
- * of which single page it's editing, so this isn't scoped by pageId.
+ * GET /api/landing-config?pageId=X
+ * Fetch the config (themes + navigation/metadata — no version history,
+ * that's a separate lazy endpoint). With `pageId`, `pages` is trimmed down
+ * to just that one page's entry — the editor and preview only ever work on
+ * one page at a time, so there's no reason to ship every other page's full
+ * draft/published component tree (images included) along with it. Anything
+ * that needs every page's slug for a uniqueness check should use the
+ * lightweight `/api/landing-config/pages` endpoint instead. Omit `pageId` to
+ * get the untrimmed `pages` map (e.g. for tooling that genuinely needs it).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const config = await readBaseLandingConfig();
+    const pageId = request.nextUrl.searchParams.get("pageId");
+
+    if (pageId) {
+      const entry = config.pages[pageId];
+      return NextResponse.json({
+        ...config,
+        pages: entry ? { [pageId]: entry } : {},
+      });
+    }
+
     return NextResponse.json(config);
   } catch (error) {
     console.error("Error reading landing config:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AutoSaveProps {
@@ -27,11 +27,18 @@ export function useAutoSave({
   const dataRef = useRef(data);
   const lastSavedRef = useRef(data);
   const isInitialRender = useRef(true);
+  // Tracked explicitly rather than derived via JSON.stringify(data) !==
+  // JSON.stringify(lastSavedRef.current) on every render — that deep-compares
+  // the whole page (every component's config, any embedded images) each time
+  // this component re-renders for any reason at all (selecting a block,
+  // opening a dropdown, changing zoom%), not just when data actually changes.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const saveData = useCallback(async () => {
     try {
       await onSave();
       lastSavedRef.current = dataRef.current;
+      setHasUnsavedChanges(false);
       // No success toast here — the "All changes saved" indicator in the
       // toolbar already covers this, and a toast on every autosave tick
       // would fire too often to be useful.
@@ -57,12 +64,15 @@ export function useAutoSave({
       return;
     }
 
-    // Check if data actually changed
-    if (JSON.stringify(data) === JSON.stringify(lastSavedRef.current)) {
+    // `data` only gets a new reference when the caller sets genuinely new
+    // state (a real edit) — reference equality is enough here, no need to
+    // deep-compare the whole page tree on every change.
+    if (data === lastSavedRef.current) {
       return;
     }
 
     dataRef.current = data;
+    setHasUnsavedChanges(true);
 
     // Clear existing timeout
     if (timeoutRef.current) {
@@ -88,15 +98,11 @@ export function useAutoSave({
     };
   }, []);
 
-  const hasUnsavedChanges = JSON.stringify(data) !== JSON.stringify(lastSavedRef.current);
-
   // Function to mark current data as saved (for manual saves)
-  const markAsSaved = useCallback(
-    (dataToMark?: unknown) => {
-      lastSavedRef.current = dataToMark ?? data;
-    },
-    [data]
-  );
+  const markAsSaved = useCallback((dataToMark?: unknown) => {
+    lastSavedRef.current = dataToMark ?? dataRef.current;
+    setHasUnsavedChanges(false);
+  }, []);
 
   return {
     hasUnsavedChanges,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,9 @@ import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 
 interface ExportImportDialogProps {
   isOpen: boolean;
+  // Which tab to land on when opened — File > Export opens on "export",
+  // Layout > Import opens on "import". Still freely switchable once open.
+  initialTab?: "export" | "import";
   onClose: () => void;
   components: ComponentConfig[];
   onImport: (components: ComponentConfig[]) => void;
@@ -24,6 +27,7 @@ interface ExportImportDialogProps {
 
 export function ExportImportDialog({
   isOpen,
+  initialTab = "export",
   onClose,
   components,
   onImport,
@@ -33,6 +37,11 @@ export function ExportImportDialog({
 }: ExportImportDialogProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"export" | "import">(initialTab);
+
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
   const [exportData, setExportData] = useState("");
   const [exportHTML, setExportHTML] = useState("");
   const [importData, setImportData] = useState("");
@@ -198,25 +207,6 @@ export function ExportImportDialog({
     }
   };
 
-  const handleUsePreset = (
-    preset: ReturnType<typeof ExportImportManager.getPresetTemplates>[0]
-  ) => {
-    setConfirmReplace({
-      description: `This will replace all ${components.length} current component(s) with the "${preset.metadata?.title}" template (${preset.components.length} component(s)). This cannot be undone.`,
-      onConfirm: () => {
-        onImport(preset.components);
-        onClose();
-
-        toast.success({
-          title: "Template applied",
-          description: `Applied "${preset.metadata?.title}" template`,
-        });
-      },
-    });
-  };
-
-  const presets = ExportImportManager.getPresetTemplates();
-
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -225,11 +215,14 @@ export function ExportImportDialog({
             <SheetTitle>Import / Export Templates</SheetTitle>
           </SheetHeader>
 
-          <Tabs defaultValue="export" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "export" | "import")}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="export">Export</TabsTrigger>
               <TabsTrigger value="import">Import</TabsTrigger>
-              <TabsTrigger value="presets">Presets</TabsTrigger>
             </TabsList>
 
             <TabsContent value="export" className="space-y-4">
@@ -367,27 +360,6 @@ export function ExportImportDialog({
                 <Button onClick={handleImportFromText} className="w-full">
                   Import Template
                 </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="presets" className="space-y-4">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Choose from pre-built templates to get started quickly.
-                </p>
-
-                {presets.map((preset, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-2">
-                    <h3 className="font-semibold">{preset.metadata?.title}</h3>
-                    <p className="text-sm text-muted-foreground">{preset.metadata?.description}</p>
-                    <div className="text-xs text-muted-foreground">
-                      {preset.components.length} components
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => handleUsePreset(preset)}>
-                      Use This Template
-                    </Button>
-                  </div>
-                ))}
               </div>
             </TabsContent>
           </Tabs>

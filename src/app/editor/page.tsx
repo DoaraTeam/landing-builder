@@ -25,13 +25,20 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LoadingScreen } from "@/components/loading-screen";
 import {
+  useKeyboardShortcuts,
+  COMMON_SHORTCUTS,
+  getShortcutKeys,
+} from "@/hooks/use-keyboard-shortcuts";
+import {
   Home,
   Eye,
   Upload,
+  Download,
   LayoutTemplate,
   History,
   FilePlus,
@@ -53,6 +60,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 // fetch resolves almost instantly, instead of flashing for a few ms.
 const MIN_LOADING_TIME_MS = 2000;
 
+// Plain "Ctrl+Shift+N"-style label for a File/Edit menu item's shortcut hint.
+const shortcutLabel = (shortcut: Parameters<typeof getShortcutKeys>[0]) =>
+  getShortcutKeys(shortcut).join("+");
+
 type DialogState = {
   type:
     | "none"
@@ -72,6 +83,11 @@ function AdminDashboard() {
   const [config, setConfig] = useState<LandingConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Separate from `saving` — that flips true for any draft save (autosave,
+  // the Preview button's save-before-open, etc.), which was making the
+  // Publish button show "Publishing..." for unrelated saves. This tracks
+  // only the actual publish request.
+  const [publishing, setPublishing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -83,7 +99,7 @@ function AdminDashboard() {
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   // Whether picking a template should create a brand new page (File > New,
   // the start-choice dialog) or replace the current page's own content
-  // (Layout > Change Template) — both share the same TemplateSelector modal.
+  // (Template > Change Template) — both share the same TemplateSelector modal.
   const [templateSelectorIntent, setTemplateSelectorIntent] = useState<"create" | "replace">(
     "create"
   );
@@ -115,10 +131,17 @@ function AdminDashboard() {
   // mounted (single- or multi-page) — drives the Edit menu's Undo/Redo/
   // Cut/Copy/Paste items, which live here rather than inside that component.
   const [editMenuState, setEditMenuState] = useState<EditMenuState>(DISABLED_EDIT_MENU_STATE);
-  // Which top menu bar dropdown (File/Edit/Layout/Help) is open. Each is a
+  // Which top menu bar dropdown (File/Edit/Template/Help) is open. Each is a
   // separate Radix DropdownMenu root, so without this shared state opening
   // one wouldn't close another that's already open.
-  const [openMenu, setOpenMenu] = useState<"file" | "edit" | "layout" | "help" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"file" | "edit" | "template" | "help" | null>(null);
+  // Set to a fresh object whenever File > Export or Template > Import is
+  // clicked, so EditableLandingPage's own Export/Import sheet opens already
+  // on the requested tab — that sheet, and the live page data it needs, live
+  // there rather than up here.
+  const [exportImportRequest, setExportImportRequest] = useState<{
+    tab: "export" | "import";
+  } | null>(null);
 
   useEffect(() => {
     fetchConfig();
@@ -138,7 +161,9 @@ function AdminDashboard() {
   const fetchConfig = async () => {
     const startedAt = Date.now();
     try {
-      const response = await fetch("/api/landing-config");
+      const response = await fetch(
+        pageId ? `/api/landing-config?pageId=${pageId}` : "/api/landing-config"
+      );
       const data: LandingConfig = await response.json();
       setConfig(data);
 
@@ -172,7 +197,7 @@ function AdminDashboard() {
   };
 
   // Replaces the CURRENT page's content with a different template — same
-  // page id/slug, just a new component tree (Layout > Change Template).
+  // page id/slug, just a new component tree (Template > Change Template).
   const handleReplaceTemplate = async (template: LandingPageTemplate) => {
     if (!pageId) return;
     const newPage = buildPageFromTemplate(template, pageId);
@@ -226,7 +251,7 @@ function AdminDashboard() {
   const handlePublishConfirm = async () => {
     if (!pageId || !draftPage) return;
 
-    setSaving(true);
+    setPublishing(true);
     try {
       const response = await fetch("/api/landing-config/publish", {
         method: "POST",
@@ -243,7 +268,7 @@ function AdminDashboard() {
       console.error("Error publishing:", error);
       setDialogState({ type: "publish-error", open: true });
     } finally {
-      setSaving(false);
+      setPublishing(false);
     }
   };
 
@@ -341,6 +366,37 @@ function AdminDashboard() {
       setSaving(false);
     }
   };
+
+  // File menu shortcuts — page/project-level actions, distinct from the
+  // component-editing shortcuts registered inside EditableLandingPage.
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        ...COMMON_SHORTCUTS.NEW_PAGE,
+        ignoreWhenTyping: true,
+        action: () => {
+          setTemplateSelectorIntent("create");
+          setTemplateSelectorOpen(true);
+        },
+      },
+      {
+        ...COMMON_SHORTCUTS.OPEN_PAGE,
+        ignoreWhenTyping: true,
+        action: () => setOpenPageDialogOpen(true),
+      },
+      {
+        ...COMMON_SHORTCUTS.MAKE_A_COPY,
+        ignoreWhenTyping: true,
+        action: () => handleMakeACopy(),
+      },
+      {
+        ...COMMON_SHORTCUTS.RENAME_PAGE,
+        ignoreWhenTyping: true,
+        action: () => setRenameOpen(true),
+      },
+    ],
+    enabled: !!draftPage,
+  });
 
   // Whether the live draft differs from every existing saved version — if
   // so, restoring an old version would silently lose it (it was never
@@ -560,21 +616,33 @@ function AdminDashboard() {
                       >
                         <FilePlus className="h-4 w-4" />
                         New
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.NEW_PAGE)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setTimeout(() => setOpenPageDialogOpen(true), 0)}
                       >
                         <FolderOpen className="h-4 w-4" />
                         Open
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.OPEN_PAGE)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleMakeACopy()}>
                         <Copy className="h-4 w-4" />
                         Make a Copy
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.MAKE_A_COPY)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setTimeout(() => setRenameOpen(true), 0)}>
                         <Pencil className="h-4 w-4" />
                         Rename
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.RENAME_PAGE)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -599,6 +667,9 @@ function AdminDashboard() {
                       >
                         <Undo2 className="h-4 w-4" />
                         Undo
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.UNDO)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         disabled={!editMenuState.canRedo}
@@ -606,6 +677,9 @@ function AdminDashboard() {
                       >
                         <Redo2 className="h-4 w-4" />
                         Redo
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.REDO)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -614,6 +688,9 @@ function AdminDashboard() {
                       >
                         <Scissors className="h-4 w-4" />
                         Cut
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.CUT)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         disabled={!editMenuState.canCopy}
@@ -621,6 +698,9 @@ function AdminDashboard() {
                       >
                         <Copy className="h-4 w-4" />
                         Copy
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.COPY)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         disabled={!editMenuState.canPaste}
@@ -628,6 +708,9 @@ function AdminDashboard() {
                       >
                         <ClipboardPaste className="h-4 w-4" />
                         Paste
+                        <DropdownMenuShortcut>
+                          {shortcutLabel(COMMON_SHORTCUTS.PASTE)}
+                        </DropdownMenuShortcut>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem disabled>
@@ -638,8 +721,8 @@ function AdminDashboard() {
                   </DropdownMenu>
 
                   <DropdownMenu
-                    open={openMenu === "layout"}
-                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "layout" : null)}
+                    open={openMenu === "template"}
+                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "template" : null)}
                   >
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -647,7 +730,7 @@ function AdminDashboard() {
                         size="sm"
                         className="px-2 text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
                       >
-                        Layout
+                        Template
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
@@ -656,6 +739,23 @@ function AdminDashboard() {
                       >
                         <LayoutTemplate className="h-4 w-4 text-amber-600" />
                         Change Template
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setTimeout(() => setExportImportRequest({ tab: "export" }), 0)
+                        }
+                      >
+                        <Download className="h-4 w-4" />
+                        Export
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setTimeout(() => setExportImportRequest({ tab: "import" }), 0)
+                        }
+                      >
+                        <Upload className="h-4 w-4" />
+                        Import
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -762,11 +862,11 @@ function AdminDashboard() {
                   <Button
                     size="sm"
                     onClick={handlePublishClick}
-                    disabled={saving}
+                    disabled={saving || publishing}
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
                     <Upload className="h-4 w-4" />
-                    {saving ? "Publishing..." : "Publish"}
+                    {publishing ? "Publishing..." : "Publish"}
                   </Button>
                 </>
               )}
@@ -821,6 +921,7 @@ function AdminDashboard() {
                   sidebarCollapsed={sidebarCollapsed}
                   onSidebarCollapsedChange={setSidebarCollapsed}
                   onEditMenuStateChange={setEditMenuState}
+                  exportImportRequest={exportImportRequest}
                   readOnly={versionSidebarOpen}
                 />
               )}
@@ -963,7 +1064,7 @@ function AdminDashboard() {
         cancelText="Cancel"
         onConfirm={handlePublishConfirm}
         variant="success"
-        loading={saving}
+        loading={publishing}
       />
 
       {/* Alert Dialogs */}

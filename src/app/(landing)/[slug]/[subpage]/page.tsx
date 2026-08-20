@@ -4,10 +4,13 @@ import { readBaseLandingConfig } from "@/lib/landing-config-store";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
+import { MultiPageNav } from "@/components/landing/MultiPageNav";
+import { CustomCode } from "@/components/landing/CustomCode";
 import { getTheme } from "@/lib/themes";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
 import { JsonLd } from "@/components/seo/json-ld";
 import { SITE_URL } from "@/lib/site-url";
+import { cn } from "@/lib/utils";
 
 interface PageProps {
   params: {
@@ -178,7 +181,15 @@ export default async function SubPage({ params }: PageProps) {
             duration={loadingConfig.duration || 1000}
             minDuration={loadingConfig.minDuration || 500}
           >
-            <main className="min-h-screen">
+            <CustomCode code={page.customCode} />
+            <MultiPageNav page={page} activePageId={subPage.id} theme={theme} />
+            <main
+              className={cn(
+                "min-h-screen",
+                page.navigation?.style === "sidebar" &&
+                  (page.navigation.position === "right" ? "mr-64" : "ml-64")
+              )}
+            >
               {sortedComponents.map((component) => (
                 <ComponentRenderer key={component.id} component={component} theme={theme} />
               ))}
