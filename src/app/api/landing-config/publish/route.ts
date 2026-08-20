@@ -8,9 +8,8 @@ import {
 
 /**
  * POST /api/landing-config/publish
- * Copies one page's draft into its own published slot. Does not touch
- * `mainPageId` — publishing a page updates its own live copy, it doesn't
- * make it the root-domain site.
+ * Copies one page's draft into its own published slot — every page is an
+ * independent project, so publishing one never affects any other page.
  * Body: { pageId: string }
  */
 export async function POST(request: NextRequest) {

@@ -11,8 +11,8 @@ import {
 
 /**
  * GET /api/landing-config
- * Fetch the whole config (every page's draft/published + themes/mainPageId —
- * no version history, that's a separate lazy endpoint). The editor needs
+ * Fetch the whole config (every page's draft/published + themes — no
+ * version history, that's a separate lazy endpoint). The editor needs
  * `themes` and the full `pages` map (for slug-uniqueness checks) regardless
  * of which single page it's editing, so this isn't scoped by pageId.
  */
