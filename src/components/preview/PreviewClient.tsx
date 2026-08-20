@@ -6,7 +6,9 @@ import { ComponentConfig, LandingConfig } from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
+import MultiPageNavigation from "@/components/landing/MultiPageNavigation";
 import { getTheme } from "@/lib/themes";
+import { cn } from "@/lib/utils";
 
 function Message({ title, description }: { title: string; description: string }) {
   return (
@@ -42,7 +44,7 @@ export function PreviewClient() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/landing-config")
+    fetch(pageId ? `/api/landing-config?pageId=${pageId}` : "/api/landing-config")
       .then((r) => r.json())
       .then((data: LandingConfig) => {
         setConfig(data);
@@ -136,6 +138,19 @@ export function PreviewClient() {
     }
   };
 
+  // Same idea as handleClick above, but for MultiPageNavigation's own
+  // onNavigate callback (it calls this with a page id, not a real href).
+  const handleNavigateToPage = (targetPageId: string) => {
+    if (targetPageId === "main") {
+      router.push(`/preview?pageId=${pageId}`);
+      return;
+    }
+    const target = page.subPages?.find((sp) => sp.id === targetPageId);
+    if (target) {
+      router.push(`/preview?pageId=${pageId}&path=${target.slug}`);
+    }
+  };
+
   const bannerLabel = activeSubPage ? `${page.title} – ${activeSubPage.title}` : page.title;
 
   return (
@@ -145,6 +160,19 @@ export function PreviewClient() {
         published
       </div>
       <div style={{ marginTop: "40px" }}>
+        {page.navigation && (page.subPages?.length ?? 0) > 0 && (
+          <MultiPageNavigation
+            subPages={page.subPages ?? []}
+            activePageId={activeSubPage ? activeSubPage.id : "main"}
+            onNavigate={handleNavigateToPage}
+            style={page.navigation.style}
+            position={page.navigation.position}
+            showIcons={page.navigation.showIcons}
+            sticky={page.navigation.sticky}
+            theme={theme}
+            mainPageTitle={page.title}
+          />
+        )}
         <ThemeProvider theme={theme}>
           <LandingPageLoader
             enabled={loadingConfig.enabled}
@@ -153,7 +181,13 @@ export function PreviewClient() {
             duration={loadingConfig.duration || 1000}
             minDuration={loadingConfig.minDuration || 500}
           >
-            <main className="min-h-screen">
+            <main
+              className={cn(
+                "min-h-screen",
+                page.navigation?.style === "sidebar" &&
+                  (page.navigation.position === "right" ? "mr-64" : "ml-64")
+              )}
+            >
               {sortedComponents.map((component) => (
                 <ComponentRenderer key={component.id} component={component} theme={theme} />
               ))}

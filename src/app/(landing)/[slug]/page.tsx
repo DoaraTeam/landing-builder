@@ -5,6 +5,7 @@ import { LandingConfig } from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
+import { CustomCode } from "@/components/landing/CustomCode";
 import MultiPageRenderer from "@/components/landing/MultiPageRenderer";
 import { getTheme } from "@/lib/themes";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
@@ -118,6 +119,7 @@ export default async function SitePage({ params }: PageProps) {
             duration={loadingConfig.duration || 1000}
             minDuration={loadingConfig.minDuration || 500}
           >
+            <CustomCode code={page.customCode} />
             <main className="min-h-screen">
               {sortedComponents.map((component) => (
                 <ComponentRenderer key={component.id} component={component} theme={theme} />

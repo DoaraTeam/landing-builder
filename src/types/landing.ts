@@ -711,6 +711,11 @@ export interface LandingPage {
   // whether subPages is non-empty — there's no separate stored flag.
   subPages?: SubPage[];
   navigation?: PageNavigation;
+  // Raw HTML/script snippet (analytics, chat widgets, etc.), inserted as-is
+  // near the top of the published page. The page owner's own trusted code —
+  // not user-generated content — same trust model as WordPress's "Insert
+  // Header/Footer" or Webflow/Squarespace's custom code panels.
+  customCode?: string;
 }
 
 /**
