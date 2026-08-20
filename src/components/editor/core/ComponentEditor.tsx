@@ -40,7 +40,6 @@ interface ComponentEditorProps {
   allComponents?: ComponentConfig[]; // All components in current page
   subPages?: SubPage[]; // Subpages for navigation
   pageSlug?: string; // Current page slug
-  isMultiPage?: boolean; // Whether this is a multi-page landing
   // Reports whether there are unsaved edits, so a parent switching the
   // selected component elsewhere can guard against silently discarding them.
   onDirtyChange?: (isDirty: boolean) => void;
@@ -57,7 +56,6 @@ export function ComponentEditor({
   allComponents = [],
   subPages = [],
   pageSlug,
-  isMultiPage = false,
   onDirtyChange,
 }: ComponentEditorProps) {
   // Caches the last non-null component so the panel keeps showing its fields
@@ -185,7 +183,7 @@ export function ComponentEditor({
           // A plain opacity transition (not a keyframe animation) so that
           // clicking close mid-open reverses smoothly from wherever the
           // fade currently is, instead of restarting from a fixed keyframe.
-          "fixed inset-0 z-[998] bg-black/80 transition-opacity duration-300",
+          "fixed inset-0 z-[998] bg-black/30 transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0"
         )}
         onClick={handleRequestClose}
@@ -310,7 +308,6 @@ export function ComponentEditor({
                     allComponents={allComponents}
                     subPages={subPages}
                     pageSlug={pageSlug}
-                    isMultiPage={isMultiPage}
                   />
                 )}
 

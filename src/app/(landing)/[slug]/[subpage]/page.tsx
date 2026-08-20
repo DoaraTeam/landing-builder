@@ -1,8 +1,6 @@
 import { Metadata } from "next";
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { notFound } from "next/navigation";
-import { LandingConfig } from "@/types/landing";
+import { readBaseLandingConfig } from "@/lib/landing-config-store";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
@@ -23,15 +21,15 @@ interface PageProps {
  */
 export async function generateStaticParams() {
   try {
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
 
     const params: Array<{ slug: string; subpage: string }> = [];
 
-    // Iterate through all pages and their subpages
-    Object.values(config.pages).forEach((page) => {
-      if (page.subPages && page.subPages.length > 0) {
+    // Iterate through all published pages and their subpages — a page with
+    // no published copy yet has nothing to statically generate.
+    Object.values(config.pages).forEach((entry) => {
+      const page = entry.published;
+      if (page?.subPages && page.subPages.length > 0) {
         page.subPages.forEach((subPage) => {
           if (subPage.visible !== false) {
             params.push({
@@ -55,11 +53,11 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
 
-    const page = Object.values(config.pages).find((p) => p.slug === params.slug);
+    const page = Object.values(config.pages)
+      .map((entry) => entry.published)
+      .find((p): p is NonNullable<typeof p> => p?.slug === params.slug);
 
     if (!page) {
       return {
@@ -115,12 +113,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SubPage({ params }: PageProps) {
   try {
     // Read configuration
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
 
-    // Find parent page by slug
-    const page = Object.values(config.pages).find((p) => p.slug === params.slug);
+    // Find parent page by slug — only a published copy is publicly reachable.
+    const page = Object.values(config.pages)
+      .map((entry) => entry.published)
+      .find((p): p is NonNullable<typeof p> => p?.slug === params.slug);
 
     if (!page) {
       notFound();
@@ -150,9 +148,6 @@ export default async function SubPage({ params }: PageProps) {
       minDuration: 500,
     };
 
-    // Legacy pages (unlike the current-landing model) have no route of their
-    // own at just /{slug} — only /{slug}/{subpage} — so there's no real URL
-    // for a "page root" crumb to point to. Only the reachable page is listed.
     const breadcrumbJsonLd = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -160,7 +155,13 @@ export default async function SubPage({ params }: PageProps) {
         {
           "@type": "ListItem",
           position: 1,
-          name: `${page.title} – ${subPage.title}`,
+          name: page.title,
+          item: `${SITE_URL}/${page.slug}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: subPage.title,
           item: `${SITE_URL}/${page.slug}/${subPage.slug}`,
         },
       ],

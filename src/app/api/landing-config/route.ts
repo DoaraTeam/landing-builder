@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
 import { LandingConfig, LandingPage } from "@/types/landing";
-
-const CONFIG_PATH = join(process.cwd(), "public/data/landing-config.json");
+import {
+  readBaseLandingConfig,
+  writeBaseLandingConfig,
+  getPageEntry,
+  upsertPageDraft,
+  renamePage,
+  deletePage,
+} from "@/lib/landing-config-store";
 
 /**
  * GET /api/landing-config
- * Fetch the complete landing configuration
+ * Fetch the whole config (every page's draft/published + themes/mainPageId —
+ * no version history, that's a separate lazy endpoint). The editor needs
+ * `themes` and the full `pages` map (for slug-uniqueness checks) regardless
+ * of which single page it's editing, so this isn't scoped by pageId.
  */
 export async function GET() {
   try {
-    const data = await readFile(CONFIG_PATH, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
-
+    const config = await readBaseLandingConfig();
     return NextResponse.json(config);
   } catch (error) {
     console.error("Error reading landing config:", error);
@@ -23,30 +28,31 @@ export async function GET() {
 
 /**
  * POST /api/landing-config
- * Save the complete landing configuration
- * Body: LandingConfig
+ * Create or update one page's draft content. `name` only matters when
+ * creating a new page — it seeds the project's own name (defaulting to the
+ * draft's title if omitted); ignored for an update to an existing page.
+ * Body: { pageId: string, draft: LandingPage, name?: string }
  */
 export async function POST(request: NextRequest) {
   try {
-    const config: LandingConfig = await request.json();
+    const body: { pageId?: string; draft?: LandingPage; name?: string } = await request.json();
+    const { pageId, draft, name } = body;
 
-    // Validate config
-    if (!config.version || !config.metadata || !config.themes || !config.pages) {
-      return NextResponse.json({ error: "Invalid configuration structure" }, { status: 400 });
+    if (!pageId || !draft) {
+      return NextResponse.json({ error: "Missing pageId or draft" }, { status: 400 });
     }
 
-    // Update metadata
-    config.metadata.lastUpdated = new Date().toISOString();
-    config.metadata.totalPages = Object.keys(config.pages).length;
+    const config: LandingConfig = await readBaseLandingConfig();
+    const updated = upsertPageDraft(config, pageId, draft, name);
+    updated.metadata = {
+      ...updated.metadata,
+      lastUpdated: new Date().toISOString(),
+      totalPages: Object.keys(updated.pages).length,
+    };
 
-    // Write to file with pretty formatting
-    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
+    await writeBaseLandingConfig(updated);
 
-    return NextResponse.json({
-      success: true,
-      message: "Configuration saved successfully",
-      metadata: config.metadata,
-    });
+    return NextResponse.json({ success: true, page: updated.pages[pageId] });
   } catch (error) {
     console.error("Error saving landing config:", error);
     return NextResponse.json({ error: "Failed to save configuration" }, { status: 500 });
@@ -54,102 +60,55 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PUT /api/landing-config
- * Update a single page in the configuration
- * Body: { pageId: string, pageData: LandingPage }
+ * PATCH /api/landing-config
+ * Rename a project — only its own identity, never draft/published content,
+ * so no save-then-publish cycle needed. Lighter than POST since the caller
+ * (e.g. the /pages dashboard) only has a PageSummary, not the full draft.
+ * Body: { pageId: string, name: string }
  */
-export async function PUT(request: NextRequest) {
+export async function PATCH(request: NextRequest) {
   try {
-    const { pageId, pageData } = await request.json();
+    const body: { pageId?: string; name?: string } = await request.json();
+    const { pageId, name } = body;
 
-    if (!pageId || !pageData) {
-      return NextResponse.json({ error: "Missing pageId or pageData" }, { status: 400 });
+    if (!pageId || !name?.trim()) {
+      return NextResponse.json({ error: "Missing pageId or name" }, { status: 400 });
     }
 
-    // Read current config
-    const data = await readFile(CONFIG_PATH, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
-
-    // Validate page data
-    if (!pageData.id || !pageData.title || !pageData.slug) {
-      return NextResponse.json({ error: "Invalid page data structure" }, { status: 400 });
+    const config = await readBaseLandingConfig();
+    if (!getPageEntry(config, pageId)) {
+      return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    // Check for slug conflicts (except same page)
-    const slugConflict = Object.entries(config.pages).find(
-      ([id, page]) => id !== pageId && page.slug === pageData.slug
-    );
+    const updated = renamePage(config, pageId, name.trim());
+    await writeBaseLandingConfig(updated);
 
-    if (slugConflict) {
-      return NextResponse.json(
-        { error: `Slug "${pageData.slug}" is already used by another page` },
-        { status: 409 }
-      );
-    }
-
-    // Update page
-    const updatedPage: LandingPage = {
-      ...pageData,
-      updatedAt: new Date().toISOString(),
-    };
-
-    config.pages[pageId] = updatedPage;
-
-    // Update metadata
-    config.metadata.lastUpdated = new Date().toISOString();
-    config.metadata.totalPages = Object.keys(config.pages).length;
-
-    // Save config
-    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-
-    return NextResponse.json({
-      success: true,
-      message: "Page updated successfully",
-      page: updatedPage,
-    });
+    return NextResponse.json({ success: true, page: updated.pages[pageId] });
   } catch (error) {
-    console.error("Error updating page:", error);
-    return NextResponse.json({ error: "Failed to update page" }, { status: 500 });
+    console.error("Error renaming page:", error);
+    return NextResponse.json({ error: "Failed to rename page" }, { status: 500 });
   }
 }
 
 /**
- * DELETE /api/landing-config
- * Delete a page from the configuration
- * Query: ?pageId=xxx
+ * DELETE /api/landing-config?pageId=X
+ * Remove a page entirely.
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const pageId = searchParams.get("pageId");
-
+    const pageId = request.nextUrl.searchParams.get("pageId");
     if (!pageId) {
       return NextResponse.json({ error: "Missing pageId parameter" }, { status: 400 });
     }
 
-    // Read current config
-    const data = await readFile(CONFIG_PATH, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
-
-    // Check if page exists
-    if (!config.pages[pageId]) {
+    const config = await readBaseLandingConfig();
+    if (!getPageEntry(config, pageId)) {
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    // Delete page
-    delete config.pages[pageId];
+    await writeBaseLandingConfig(deletePage(config, pageId));
 
-    // Update metadata
-    config.metadata.lastUpdated = new Date().toISOString();
-    config.metadata.totalPages = Object.keys(config.pages).length;
-
-    // Save config
-    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-
-    return NextResponse.json({
-      success: true,
-      message: "Page deleted successfully",
-    });
+    return NextResponse.json({ success: true, message: "Page deleted successfully" });
   } catch (error) {
     console.error("Error deleting page:", error);
     return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });

@@ -128,7 +128,6 @@ export default function MultiPageEditor({
     // Preserve multi-page properties
     const updatedPage = {
       ...updated,
-      isMultiPage: true, // Always true for MultiPageEditor
       subPages: editingPage.subPages, // Preserve subPages
       navigation: editingPage.navigation, // Preserve navigation
     };

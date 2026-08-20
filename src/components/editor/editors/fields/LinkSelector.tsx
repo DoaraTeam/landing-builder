@@ -18,8 +18,7 @@ interface LinkSelectorProps {
   placeholder?: string;
   components?: ComponentConfig[]; // Available components for hash links
   subPages?: SubPage[]; // Available subpages for navigation
-  pageSlug?: string; // Current page slug for building subpage URLs
-  isMultiPage?: boolean; // Whether this is a multi-page landing
+  pageSlug?: string; // Current page's own slug, used to build subpage URLs
 }
 
 /**
@@ -37,7 +36,6 @@ export function LinkSelector({
   components = [],
   subPages = [],
   pageSlug,
-  isMultiPage = false,
 }: LinkSelectorProps) {
   // Generate available link options
   const linkOptions: Array<{ value: string; label: string; group: string }> = [];
@@ -71,16 +69,14 @@ export function LinkSelector({
       });
     });
 
-  // Add subpage links
+  // Add subpage links — every page is equal, so sub-pages always live under
+  // their own parent page's slug (/pageSlug/subSlug), uniformly.
   if (subPages.length > 0) {
     subPages
       .filter((sp) => sp.visible)
       .forEach((sp) => {
-        // For multi-page landing: direct route (/blog)
-        // For single-page landing: nested route (/pageSlug/blog)
-        const linkValue = isMultiPage ? `/${sp.slug}` : `/${pageSlug}/${sp.slug}`;
         linkOptions.push({
-          value: linkValue,
+          value: `/${pageSlug}/${sp.slug}`,
           label: `${sp.title} (navigate to page)`,
           group: "Pages",
         });

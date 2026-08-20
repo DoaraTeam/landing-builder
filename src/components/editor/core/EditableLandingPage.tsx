@@ -477,19 +477,18 @@ export function EditableLandingPage({
       link: `#${comp.id}`,
     }));
 
-    // For multi-page landing: Add subpage tabs to header
-    // Subpages should link directly to their routes (e.g., /blog, /pricing)
+    // Add subpage tabs to header — every page's sub-pages live under its own
+    // slug uniformly (e.g. /my-page/blog), no special case for any page.
     let newTabs = [...componentTabs];
 
-    // Add subpage tabs if it's a multi-page landing
-    if (editingPage.isMultiPage) {
+    if ((editingPage.subPages?.length ?? 0) > 0) {
       const subPageTabs =
         editingPage.subPages
           ?.filter((sp) => sp.visible)
           .map((sp) => ({
             id: sp.id,
             text: sp.title,
-            link: `/${sp.slug}`, // Direct route to subpage
+            link: `/${editingPage.slug}/${sp.slug}`,
           })) || [];
       newTabs = [...componentTabs, ...subPageTabs];
     }
@@ -1040,14 +1039,17 @@ export function EditableLandingPage({
     setActiveId(null);
   };
 
-  // Scale the zoomed-out/in canvas back to its natural (100%) width, then
-  // compute the percentage that makes it fit the currently available width.
+  // Compute the zoom percentage that makes the canvas fit the currently
+  // available width. CSS transform (used to apply zoom) is purely a paint-time
+  // effect — it doesn't change the element's own layout size — so
+  // content.scrollWidth is already the natural, unzoomed width regardless of
+  // the current zoomPercent and needs no compensation for it.
   const handleFitZoom = () => {
     const wrapper = canvasWrapperRef.current;
     const content = canvasContentRef.current;
     if (!wrapper || !content) return;
 
-    const naturalWidth = content.scrollWidth / (zoomPercent / 100);
+    const naturalWidth = content.scrollWidth;
     if (naturalWidth <= 0) return;
 
     const fitPercent = Math.round(
@@ -1307,7 +1309,7 @@ export function EditableLandingPage({
                         <Paintbrush className="h-4 w-4" />
                         Custom Theme
                       </DropdownMenuItem>
-                      {editingPage.isMultiPage && onUpdateNavigation && (
+                      {(editingPage.subPages?.length ?? 0) > 0 && onUpdateNavigation && (
                         <DropdownMenuItem
                           onClick={() => setTimeout(() => setNavigationSettingsOpen(true), 0)}
                         >
@@ -1351,16 +1353,15 @@ export function EditableLandingPage({
 
         {/* Editor Content */}
         <div ref={canvasWrapperRef} className="overflow-x-auto">
-          <div
-            ref={canvasContentRef}
-            className="container mx-auto p-4"
-            style={
-              zoomPercent !== 100
-                ? { transform: `scale(${zoomPercent / 100})`, transformOrigin: "top center" }
-                : undefined
-            }
-          >
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div ref={canvasContentRef} className="w-full p-4">
+            <div
+              className="bg-white rounded-xl shadow-sm overflow-hidden"
+              style={
+                zoomPercent !== 100
+                  ? { transform: `scale(${zoomPercent / 100})`, transformOrigin: "top center" }
+                  : undefined
+              }
+            >
               {readOnly ? (
                 sortedComponents.map((component) => (
                   <div
@@ -1448,7 +1449,7 @@ export function EditableLandingPage({
               )}
 
               {sortedComponents.length === 0 && (
-                <div className="py-20 text-center text-gray-500">
+                <div className="min-h-[70vh] flex items-center justify-center text-center text-gray-500">
                   <p>No components yet. Add your first component to get started.</p>
                 </div>
               )}
@@ -1468,7 +1469,6 @@ export function EditableLandingPage({
             allComponents={editingPage.components}
             subPages={editingPage.subPages || []}
             pageSlug={editingPage.slug}
-            isMultiPage={editingPage.isMultiPage}
             onDirtyChange={(isDirty) => {
               setComponentEditorDirty(isDirty);
               onComponentEditorDirtyChange?.(isDirty);
@@ -1524,7 +1524,7 @@ export function EditableLandingPage({
             });
             setExportImportOpen(false);
           }}
-          isMultiPage={editingPage.isMultiPage}
+          isMultiPage={(editingPage.subPages?.length ?? 0) > 0}
           subPages={editingPage.subPages}
           pageTitle={editingPage.title}
         />
@@ -1545,7 +1545,7 @@ export function EditableLandingPage({
         />
 
         {/* Navigation Settings (multi-page only) */}
-        {editingPage.isMultiPage && onUpdateNavigation && (
+        {(editingPage.subPages?.length ?? 0) > 0 && onUpdateNavigation && (
           <NavigationSettings
             open={navigationSettingsOpen}
             onOpenChange={setNavigationSettingsOpen}

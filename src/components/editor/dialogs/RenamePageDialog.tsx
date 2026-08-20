@@ -44,11 +44,11 @@ export function RenamePageDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Rename page</DialogTitle>
-          <DialogDescription>Give this landing page a new name.</DialogDescription>
+          <DialogTitle>Rename site</DialogTitle>
+          <DialogDescription>Give this site a new name.</DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-2">
-          <Label htmlFor="rename-title">Title</Label>
+          <Label htmlFor="rename-title">Name</Label>
           <Input
             id="rename-title"
             value={title}

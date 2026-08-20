@@ -1,11 +1,11 @@
 import { Metadata } from "next";
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { notFound } from "next/navigation";
+import { readBaseLandingConfig } from "@/lib/landing-config-store";
 import { LandingConfig } from "@/types/landing";
 import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 import { ThemeProvider } from "@/components/landing/ThemeProvider";
 import { LandingPageLoader } from "@/components/landing/LandingPageLoader";
+import MultiPageRenderer from "@/components/landing/MultiPageRenderer";
 import { getTheme } from "@/lib/themes";
 import { seoConfigToMetadata } from "@/lib/seo-utils";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -17,24 +17,22 @@ interface PageProps {
   };
 }
 
+function findPublishedPageBySlug(config: LandingConfig, slug: string) {
+  return Object.values(config.pages)
+    .map((entry) => entry.published)
+    .find((p): p is NonNullable<typeof p> => p?.slug === slug);
+}
+
 /**
- * Generate static params for all sub-pages at build time
+ * Generate static params for every published page's own top-level route.
  */
 export async function generateStaticParams() {
   try {
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
 
-    const publishedPage = config.currentLanding?.published;
-
-    if (!publishedPage || !publishedPage.isMultiPage || !publishedPage.subPages) {
-      return [];
-    }
-
-    return publishedPage.subPages.map((subPage) => ({
-      slug: subPage.slug,
-    }));
+    return Object.values(config.pages)
+      .filter((entry) => entry.published)
+      .map((entry) => ({ slug: entry.published!.slug }));
   } catch (error) {
     console.error("Error generating static params:", error);
     return [];
@@ -46,53 +44,16 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
+    const page = findPublishedPageBySlug(config, params.slug);
 
-    const publishedPage = config.currentLanding?.published;
-
-    if (!publishedPage || !publishedPage.isMultiPage || !publishedPage.subPages) {
+    if (!page || !page.seo) {
       return {
         title: "Page Not Found",
       };
     }
 
-    const subPage = publishedPage.subPages.find((p) => p.slug === params.slug);
-
-    if (!subPage) {
-      return {
-        title: "Page Not Found",
-      };
-    }
-
-    // A sub-page with its own SEOConfig is fully independent — the user has
-    // already set title/description/robots/canonical/OG/Twitter/etc.
-    // themselves, so no fallback/override is needed.
-    if (subPage.seo) {
-      return seoConfigToMetadata(subPage.seo);
-    }
-
-    // Older sub-pages (created before per-page SEO existed) have no seo of
-    // their own — inherit the parent page's SEOConfig as a base, overridden
-    // with subpage-specific title/description, same as before.
-    const baseMetadata = publishedPage.seo ? seoConfigToMetadata(publishedPage.seo) : {};
-
-    return {
-      ...baseMetadata,
-      title: `${subPage.title} - ${publishedPage.title}`,
-      description: subPage.description || publishedPage.seo?.metaDescription || "",
-      openGraph: {
-        ...baseMetadata.openGraph,
-        title: `${subPage.title} - ${publishedPage.title}`,
-        description: subPage.description || publishedPage.seo?.metaDescription || "",
-      },
-      twitter: {
-        ...baseMetadata.twitter,
-        title: `${subPage.title} - ${publishedPage.title}`,
-        description: subPage.description || publishedPage.seo?.metaDescription || "",
-      },
-    };
+    return seoConfigToMetadata(page.seo);
   } catch (error) {
     console.error("Error generating metadata:", error);
     return {
@@ -102,44 +63,43 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 /**
- * Sub-page component for multi-page landing (Server-side rendered)
+ * A page's own top-level content, at its own slug — every page gets this
+ * route uniformly, there's no special "main" site anymore.
  */
-export default async function SubPage({ params }: PageProps) {
+export default async function SitePage({ params }: PageProps) {
   try {
-    // Read configuration
-    const configPath = join(process.cwd(), "public/data/landing-config.json");
-    const data = await readFile(configPath, "utf-8");
-    const config: LandingConfig = JSON.parse(data);
+    const config = await readBaseLandingConfig();
+    const page = findPublishedPageBySlug(config, params.slug);
 
-    // Get published page
-    const publishedPage = config.currentLanding?.published;
-
-    if (!publishedPage) {
+    if (!page) {
       notFound();
     }
 
-    // If not multi-page, redirect to home
-    if (!publishedPage.isMultiPage || !publishedPage.subPages) {
-      notFound();
+    const theme = getTheme(page.theme || "modern", config.themes);
+    const isMultiPage = (page.subPages?.length ?? 0) > 0;
+
+    const websiteJsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: page.title,
+      url: `${SITE_URL}/${page.slug}`,
+      ...(page.description ? { description: page.description } : {}),
+    };
+
+    if (isMultiPage) {
+      return (
+        <>
+          <JsonLd data={websiteJsonLd} />
+          <MultiPageRenderer page={page} customThemes={config.themes} />
+        </>
+      );
     }
 
-    // Find sub-page by slug
-    const subPage = publishedPage.subPages.find((p) => p.slug === params.slug);
-
-    if (!subPage) {
-      notFound();
-    }
-
-    // Get theme
-    const theme = getTheme(publishedPage.theme || "modern", config.themes);
-
-    // Sort components by order and filter visible ones
-    const sortedComponents = [...subPage.components]
+    const sortedComponents = [...page.components]
       .filter((c) => c.visible !== false)
       .sort((a, b) => a.order - b.order);
 
-    // Get loading configuration from main page
-    const loadingConfig = publishedPage.loading || {
+    const loadingConfig = page.loading || {
       enabled: false,
       type: "spin" as const,
       color: "#f97316",
@@ -147,28 +107,9 @@ export default async function SubPage({ params }: PageProps) {
       minDuration: 500,
     };
 
-    const breadcrumbJsonLd = {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        {
-          "@type": "ListItem",
-          position: 1,
-          name: publishedPage.title,
-          item: `${SITE_URL}/publish`,
-        },
-        {
-          "@type": "ListItem",
-          position: 2,
-          name: subPage.title,
-          item: `${SITE_URL}/${subPage.slug}`,
-        },
-      ],
-    };
-
     return (
       <>
-        <JsonLd data={breadcrumbJsonLd} />
+        <JsonLd data={websiteJsonLd} />
         <ThemeProvider theme={theme}>
           <LandingPageLoader
             enabled={loadingConfig.enabled}
@@ -187,7 +128,7 @@ export default async function SubPage({ params }: PageProps) {
       </>
     );
   } catch (error) {
-    console.error("Error rendering sub-page:", error);
+    console.error("Error rendering page:", error);
     notFound();
   }
 }
