@@ -109,10 +109,23 @@ export function EditableBlock({
         </>
       )}
 
-      {/* Toolbar - Shows on hover or when selected */}
+      {/* Toolbar - Shows on hover or when selected. pointer-events follow
+          opacity explicitly — otherwise this invisible (opacity-0) box still
+          sits over whatever's underneath and eats clicks meant for it, even
+          while not visibly shown.
+          For the header specifically, this box also can't sit at top-right
+          like every other block: that's the exact corner the Header's own
+          nav+CTA links render in, and being position:absolute it always
+          paints above the header's (position:static) content regardless of
+          z-index — so on hover it physically intercepts clicks meant for
+          those nav links before they ever reach the header. Bottom-right is
+          clear for every header layout, so header blocks anchor there
+          instead; every other block keeps the normal top-right spot. */}
       <div
-        className={`absolute top-0 right-0 m-2 flex gap-1 transition-opacity z-[60] ${
-          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        className={`absolute ${component.type === "header" ? "bottom-0 right-0 mb-2 mr-2" : "top-0 right-0 m-2"} flex gap-1 transition-opacity z-[60] pointer-events-none ${
+          isSelected
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto"
         }`}
       >
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 flex items-center gap-1 p-1">
@@ -259,10 +272,13 @@ export function EditableBlock({
         onConfirm={onDelete}
       />
 
-      {/* Order Badge - Bottom Left */}
+      {/* Order Badge - Bottom Left. Same pointer-events-follows-opacity
+          reasoning as the toolbar above. */}
       <div
-        className={`absolute bottom-2 left-2 transition-opacity ${
-          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        className={`absolute bottom-2 left-2 transition-opacity pointer-events-none ${
+          isSelected
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto"
         }`}
       >
         <div className="bg-white rounded px-2 py-1 text-xs font-medium text-gray-600 shadow-sm border border-gray-200">

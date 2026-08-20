@@ -53,19 +53,10 @@ export function Header({ config, theme }: HeaderProps) {
     // Handle hash links for smooth scrolling
     if (link.startsWith("#")) {
       e.preventDefault();
+      e.stopPropagation();
       const targetId = link.substring(1);
       const targetElement = document.getElementById(targetId);
-
-      if (targetElement) {
-        // Calculate offset for fixed/sticky headers
-        const headerHeight = position === "fixed" || position === "sticky" ? 80 : 0;
-        const targetPosition = targetElement.offsetTop - headerHeight;
-
-        window.scrollTo({
-          top: targetPosition,
-          behavior: "smooth",
-        });
-      }
+      targetElement?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
@@ -215,7 +206,16 @@ export function Header({ config, theme }: HeaderProps) {
                 href={tab.link}
                 onClick={(e) => handleNavClick(e, tab.link)}
                 className="text-sm font-medium hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ color: textColor }}
+                // Scroll-to-section links stay clickable even inside the
+                // editor's canvas (where a parent wraps components in
+                // pointer-events-none so clicks select the block instead of
+                // triggering real interactions) — it's a same-page smooth
+                // scroll, not a real navigation, so there's nothing unsafe
+                // about letting it still work while editing.
+                style={{
+                  color: textColor,
+                  pointerEvents: tab.link.startsWith("#") ? "auto" : undefined,
+                }}
               >
                 {tab.text}
               </a>

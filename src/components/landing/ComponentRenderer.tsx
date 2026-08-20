@@ -35,18 +35,18 @@ export function ComponentRenderer({ component, theme }: ComponentRendererProps) 
     return null;
   }
 
-  // Wrap each component in a div with ID for scroll navigation
-  const wrapWithId = (children: React.ReactNode) => {
-    // Don't add ID wrapper for header (it's the navigation itself)
-    if (type === "header") {
-      return children;
-    }
-    return (
-      <div id={id} className="scroll-mt-20">
-        {children}
-      </div>
-    );
-  };
+  // Wrap each component in a div with ID for scroll navigation. The header
+  // is included too — it's never offered as a target in the public nav tabs
+  // (syncHeaderTabs excludes it there), but the editor's PageTree section
+  // list lists every component including the header, and needs a real
+  // scroll-to-here target for it just like everything else. A plain
+  // non-positioned wrapper doesn't interfere with the header's own
+  // sticky/fixed positioning.
+  const wrapWithId = (children: React.ReactNode) => (
+    <div id={id} className="scroll-mt-20">
+      {children}
+    </div>
+  );
 
   let componentElement: React.ReactNode;
 
