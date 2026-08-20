@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LandingPage, LandingConfig, LoadingConfig, SEOConfig } from "@/types/landing";
+import { LandingPage, LandingConfig, LoadingConfig, PageSummary, SEOConfig } from "@/types/landing";
 import LoadingConfigEditor from "@/components/editor/editors/fields/LoadingConfigEditor";
 import SEOEditor from "@/components/editor/editors/fields/SEOEditor";
 
@@ -64,6 +64,19 @@ export default function PageSettingsModal({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // For the slug-uniqueness check below. Fetched from the lightweight
+  // summaries endpoint rather than requiring the full `config.pages` (every
+  // other page's entire draft/published component tree, images included) —
+  // this modal only ever needs every page's own slug.
+  const [otherPages, setOtherPages] = useState<PageSummary[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/landing-config/pages")
+      .then((r) => r.json())
+      .then((data) => setOtherPages(data.pages || []))
+      .catch((error) => console.error("Error fetching pages for slug check:", error));
+  }, [open]);
 
   const generateSlug = (title: string) => {
     return title
@@ -100,10 +113,7 @@ export default function PageSettingsModal({
       setError("Slug can only contain lowercase letters, numbers, and hyphens");
       return false;
     }
-    if (
-      formData.slug !== page.slug &&
-      Object.values(config.pages).some((p) => p.draft.slug === formData.slug)
-    ) {
+    if (formData.slug !== page.slug && otherPages.some((p) => p.slug === formData.slug)) {
       setError("A page with this slug already exists");
       return false;
     }
