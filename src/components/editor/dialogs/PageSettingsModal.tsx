@@ -102,7 +102,7 @@ export default function PageSettingsModal({
     }
     if (
       formData.slug !== page.slug &&
-      Object.values(config.pages).some((p) => p.slug === formData.slug)
+      Object.values(config.pages).some((p) => p.draft.slug === formData.slug)
     ) {
       setError("A page with this slug already exists");
       return false;

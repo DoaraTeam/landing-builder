@@ -59,7 +59,7 @@ function Hero() {
             <Button size="lg" className="gap-4" variant="outline">
               Book a demo <PhoneCall className="w-4 h-4" />
             </Button>
-            <Button size="lg" className="gap-4" onClick={() => router.push("/editor")}>
+            <Button size="lg" className="gap-4" onClick={() => router.push("/pages")}>
               Start building <MoveRight className="w-4 h-4" />
             </Button>
           </div>

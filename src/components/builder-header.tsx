@@ -32,7 +32,7 @@ export function BuilderHeader() {
           ))}
         </nav>
 
-        <Button size="sm" className="gap-1.5" onClick={() => router.push("/editor")}>
+        <Button size="sm" className="gap-1.5" onClick={() => router.push("/pages")}>
           Start building <MoveRight className="w-3.5 h-3.5" />
         </Button>
       </div>
