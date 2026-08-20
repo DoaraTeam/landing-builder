@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ComponentConfig } from "@/types/landing";
+import { memo, useState } from "react";
+import { ComponentConfig, Theme } from "@/types/landing";
 import {
   Eye,
   EyeOff,
@@ -17,17 +17,23 @@ import { Button } from "@/components/ui/button";
 import { useSortable } from "@dnd-kit/sortable";
 import { getComponentDisplayName } from "@/lib/component-labels";
 import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
+import { ComponentRenderer } from "@/components/landing/ComponentRenderer";
 
 interface EditableBlockProps {
   component: ComponentConfig;
+  theme?: Theme;
   isSelected: boolean;
-  onSelect: () => void;
-  onToggleVisibility: () => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onChangeTemplate?: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+  // These take the component's own id rather than being pre-bound per item,
+  // so the parent can pass the same stable function to every block instead
+  // of a fresh inline closure per render — required for React.memo below to
+  // actually skip re-rendering blocks whose own props didn't change.
+  onSelect: (id: string) => void;
+  onToggleVisibility: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onChangeTemplate?: (id: string) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   // First/last block in the page — the outer canvas card clips to a rounded
@@ -37,15 +43,20 @@ interface EditableBlockProps {
   // sits, making the hover effect look like it's missing at that corner.
   isFirst?: boolean;
   isLast?: boolean;
-  children: React.ReactNode;
 }
 
 /**
  * EditableBlock - Wrapper for components in edit mode
  * Provides selection, visibility toggle, delete, duplicate, move functionality
+ *
+ * Wrapped in React.memo — the canvas can hold many of these, and without it,
+ * any state change in the parent (selecting a different block, editing
+ * another component's content) re-renders every block on the page instead of
+ * just the one whose own props actually changed.
  */
-export function EditableBlock({
+export const EditableBlock = memo(function EditableBlock({
   component,
+  theme,
   isSelected,
   onSelect,
   onToggleVisibility,
@@ -58,7 +69,6 @@ export function EditableBlock({
   canMoveDown = true,
   isFirst = false,
   isLast = false,
-  children,
 }: EditableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: component.id,
@@ -76,10 +86,23 @@ export function EditableBlock({
       ref={setNodeRef}
       style={style}
       className={`relative group transition-all duration-200 ${isSelected ? "shadow-xl z-10" : "hover:shadow-md z-0"} ${!component.visible ? "opacity-60" : ""} ${isDragging ? "opacity-50 scale-105" : ""}`}
-      onClick={onSelect}
+      onClick={() => onSelect(component.id)}
     >
       {/* Component Content */}
-      <div className="pointer-events-none">{children}</div>
+      <div className="pointer-events-none">
+        {/* Special wrapper for header to ensure EditableBlock features work properly */}
+        <div
+          className={`w-full ${component.type === "header" ? "relative" : "overflow-hidden"}`}
+          style={
+            component.type === "header"
+              ? // Contain header within EditableBlock bounds
+                { position: "relative", isolation: "isolate" }
+              : undefined
+          }
+        >
+          <ComponentRenderer component={component} theme={theme} />
+        </div>
+      </div>
 
       {/* Border Indicator - Clean solid border when selected */}
       <div
@@ -154,7 +177,7 @@ export function EditableBlock({
               className="h-7 w-7 p-0 hover:bg-blue-50"
               onClick={(e) => {
                 e.stopPropagation();
-                onMoveUp();
+                onMoveUp(component.id);
               }}
               disabled={!canMoveUp}
               title="Move Up"
@@ -169,7 +192,7 @@ export function EditableBlock({
               className="h-7 w-7 p-0 hover:bg-blue-50"
               onClick={(e) => {
                 e.stopPropagation();
-                onMoveDown();
+                onMoveDown(component.id);
               }}
               disabled={!canMoveDown}
               title="Move Down"
@@ -188,7 +211,7 @@ export function EditableBlock({
               className="h-7 w-7 p-0 hover:bg-purple-50 hover:text-purple-600"
               onClick={(e) => {
                 e.stopPropagation();
-                onChangeTemplate();
+                onChangeTemplate(component.id);
               }}
               title="Change Template"
             >
@@ -203,7 +226,7 @@ export function EditableBlock({
             className="h-7 w-7 p-0 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
-              onSelect();
+              onSelect(component.id);
             }}
             title="Edit"
           >
@@ -221,7 +244,7 @@ export function EditableBlock({
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              onToggleVisibility();
+              onToggleVisibility(component.id);
             }}
             title={component.visible ? "Hide component" : "Show component (Click to unhide)"}
           >
@@ -239,7 +262,7 @@ export function EditableBlock({
             className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
             onClick={(e) => {
               e.stopPropagation();
-              onDuplicate();
+              onDuplicate(component.id);
             }}
             title="Duplicate"
           >
@@ -269,7 +292,7 @@ export function EditableBlock({
         description={`Delete ${getComponentDisplayName(component.type)}? This action cannot be undone.`}
         confirmText="Delete"
         variant="destructive"
-        onConfirm={onDelete}
+        onConfirm={() => onDelete(component.id)}
       />
 
       {/* Order Badge - Bottom Left. Same pointer-events-follows-opacity
@@ -304,4 +327,4 @@ export function EditableBlock({
       )}
     </div>
   );
-}
+});
