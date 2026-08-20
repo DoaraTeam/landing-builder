@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   LandingPage,
   ComponentConfig,
@@ -13,12 +13,12 @@ import { EditableBlock } from "@/components/editor/core/EditableBlock";
 import { ComponentEditor } from "@/components/editor/core/ComponentEditor";
 import ComponentTemplatesPanel from "@/components/editor/panels/ComponentTemplatesPanel";
 import PageSettingsModal from "@/components/editor/dialogs/PageSettingsModal";
+import CustomCodeDialog from "@/components/editor/dialogs/CustomCodeDialog";
 import { ExportImportDialog } from "@/components/editor/dialogs/ExportImportDialog";
 import { HiddenComponentsList } from "@/components/editor/panels/HiddenComponentsList";
 import { ChangeTemplateDialog } from "@/components/editor/dialogs/ChangeTemplateDialog";
 import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
-import ThemeSelector from "@/components/editor/selectors/ThemeSelector";
-import CustomThemeCreator from "@/components/editor/selectors/CustomThemeCreator";
+import ThemeManager from "@/components/editor/selectors/ThemeManager";
 import NavigationSettings from "@/components/editor/selectors/NavigationSettings";
 import { EditModeProvider } from "@/contexts/EditModeContext";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,8 @@ import {
   Save,
   Plus,
   Settings,
-  Download,
   Palette,
-  Paintbrush,
+  Code2,
   SlidersHorizontal,
   ChevronDown,
   Navigation as NavigationIcon,
@@ -118,6 +117,10 @@ interface EditableLandingPageProps {
   // Set to a fresh object whenever the page-tree sidebar drag-reorders this
   // page's sections, carrying the new component id order to apply.
   reorderRequest?: { ids: string[] } | null;
+  // Set to a fresh object whenever the outer editor chrome's File > Export or
+  // Template > Import menu item is clicked, so this can open its own
+  // Export/Import sheet already on the right tab.
+  exportImportRequest?: { tab: "export" | "import" } | null;
   // When true, renders this page as a read-only preview (used for browsing
   // version history) — every edit surface (toolbar actions, drag-reorder,
   // component selection/ComponentEditor, autosave, keyboard shortcuts) is
@@ -152,6 +155,33 @@ function InsertSectionDivider({ onClick, edge }: { onClick: () => void; edge?: "
   );
 }
 
+// Text shown on the header's own auto-generated nav tabs (distinct from
+// component-labels.ts's getComponentDisplayName, which labels editor UI
+// chrome like the toolbar/section tree — this is end-user-facing copy on
+// the published site itself). Pure and side-effect-free, so it lives at
+// module scope rather than being redefined inside the component every
+// render.
+function getNavTabLabel(component: ComponentConfig): string {
+  const typeNames: Record<string, string> = {
+    hero: "Home",
+    features: "Features",
+    pricing: "Pricing",
+    testimonials: "Testimonials",
+    cta: "Get Started",
+    stats: "Stats",
+    team: "Team",
+    faq: "FAQ",
+    gallery: "Gallery",
+    "logo-cloud": "Partners",
+    contact: "Contact",
+    content: "About",
+    newsletter: "Newsletter",
+    video: "Video",
+  };
+
+  return typeNames[component.type] || component.type;
+}
+
 /**
  * EditableLandingPage - Visual editor for landing pages
  * Wraps components in EditableBlock, shows ComponentEditor panel
@@ -167,6 +197,7 @@ export function EditableLandingPage({
   onEditMenuStateChange,
   activeSectionId,
   reorderRequest,
+  exportImportRequest,
   readOnly = false,
 }: EditableLandingPageProps) {
   const {
@@ -188,9 +219,10 @@ export function EditableLandingPage({
   // button's behavior). Set by the hover "+" between/around sections.
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [customCodeOpen, setCustomCodeOpen] = useState(false);
   const [exportImportOpen, setExportImportOpen] = useState(false);
-  const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
-  const [customThemeCreatorOpen, setCustomThemeCreatorOpen] = useState(false);
+  const [exportImportTab, setExportImportTab] = useState<"export" | "import">("export");
+  const [themeManagerOpen, setThemeManagerOpen] = useState(false);
   const [navigationSettingsOpen, setNavigationSettingsOpen] = useState(false);
   const [changeTemplateDialogOpen, setChangeTemplateDialogOpen] = useState(false);
   const [componentToChangeTemplate, setComponentToChangeTemplate] =
@@ -204,16 +236,34 @@ export function EditableLandingPage({
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Mirrors of state that several block-level handlers below need to read
+  // but shouldn't have to depend on — depending on them directly would give
+  // those handlers a new identity on every selection change/content edit,
+  // which (combined with EditableBlock's React.memo) would re-render every
+  // block on the canvas instead of just the one that actually changed.
+  const editingPageRef = useRef(editingPage);
+  useEffect(() => {
+    editingPageRef.current = editingPage;
+  }, [editingPage]);
+  const selectedComponentIdRef = useRef(selectedComponentId);
+  useEffect(() => {
+    selectedComponentIdRef.current = selectedComponentId;
+  }, [selectedComponentId]);
+  const componentEditorDirtyRef = useRef(componentEditorDirty);
+  useEffect(() => {
+    componentEditorDirtyRef.current = componentEditorDirty;
+  }, [componentEditorDirty]);
+
   // Switching the selected component resets ComponentEditor's local edits (it
   // re-syncs from the newly selected component's config). If there are
   // unsaved edits, confirm before discarding them instead of switching silently.
-  const requestSelectComponent = (id: string | null) => {
-    if (componentEditorDirty && id !== selectedComponentId) {
+  const requestSelectComponent = useCallback((id: string | null) => {
+    if (componentEditorDirtyRef.current && id !== selectedComponentIdRef.current) {
       setPendingSelection({ id });
     } else {
       setSelectedComponentId(id);
     }
-  };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -242,7 +292,8 @@ export function EditableLandingPage({
     applyTheme(currentTheme);
   }, [editingPage.theme, config.themes]);
 
-  // Sync header tabs when subpages change
+  // Sync header tabs when subpages (or the navigation settings that decide
+  // whether the header should even offer sub-page links itself) change.
   useEffect(() => {
     const headerComponent = editingPage.components.find((c) => c.type === "header");
     if (headerComponent) {
@@ -255,7 +306,7 @@ export function EditableLandingPage({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPage.subPages]);
+  }, [editingPage.subPages, editingPage.navigation]);
 
   // Preview page - opens draft preview, not the published page
   const handlePreview = async () => {
@@ -311,6 +362,14 @@ export function EditableLandingPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reorderRequest]);
 
+  // The outer editor chrome's File > Export or Template > Import menu item
+  // was clicked — open the Export/Import sheet already on the right tab.
+  useEffect(() => {
+    if (!exportImportRequest) return;
+    setExportImportTab(exportImportRequest.tab);
+    setExportImportOpen(true);
+  }, [exportImportRequest]);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     shortcuts: [
@@ -330,8 +389,7 @@ export function EditableLandingPage({
         action: handlePreview,
       },
       {
-        key: "Escape",
-        description: "Close panels",
+        ...COMMON_SHORTCUTS.ESCAPE,
         action: () => {
           requestSelectComponent(null);
           setTemplatesOpen(false);
@@ -340,8 +398,7 @@ export function EditableLandingPage({
         },
       },
       {
-        key: "Delete",
-        description: "Delete selected component",
+        ...COMMON_SHORTCUTS.DELETE,
         action: () => {
           if (selectedComponentId) {
             handleDeleteComponent(selectedComponentId);
@@ -396,7 +453,7 @@ export function EditableLandingPage({
   // section-reorder handler below) and marks the data as saved so the 5s
   // autosave timer doesn't also fire its own "Auto-saved" toast for the
   // same edit a moment later.
-  const handleComponentUpdate = (updatedComponent: ComponentConfig) => {
+  const handleComponentUpdate = async (updatedComponent: ComponentConfig) => {
     const updatedComponents = editingPage.components.map((c) =>
       c.id === updatedComponent.id ? updatedComponent : c
     );
@@ -406,9 +463,22 @@ export function EditableLandingPage({
       components: updatedComponents,
     };
 
+    // Undo-worthy edit first, showing the (possibly still temporary base64)
+    // image right away instead of waiting on the upload round-trip.
     setEditingPage(updatedPage);
-    onSave(updatedPage);
-    setTimeout(() => markAsSaved(updatedPage), 0);
+
+    // Then convert any temporary base64 images to permanent files before
+    // persisting — same as the top-toolbar Save flow below, and for the same
+    // reason: skipping this here was letting raw (often multi-KB/MB) base64
+    // data get written straight into landing-config.json, then re-sent by
+    // every 5s autosave tick until the toolbar's own Save was eventually
+    // clicked. replaceEditingPage (not setEditingPage) swaps the URLs in
+    // without adding a second undo step — undoing back to transient base64
+    // that's no longer what's actually persisted wouldn't make sense.
+    const processedPage = await processImages(updatedPage);
+    replaceEditingPage(processedPage);
+    onSave(processedPage);
+    setTimeout(() => markAsSaved(processedPage), 0);
 
     toast.success({
       title: "Component Updated",
@@ -416,52 +486,12 @@ export function EditableLandingPage({
     });
   };
 
-  // Toggle component visibility
-  const handleToggleVisibility = (componentId: string) => {
-    const component = editingPage.components.find((c) => c.id === componentId);
-    const updatedComponents = editingPage.components.map((c) =>
-      c.id === componentId ? { ...c, visible: !c.visible } : c
-    );
-
-    // Auto-sync header tabs if header exists
-    const syncedComponents = syncHeaderTabs(updatedComponents);
-
-    setEditingPage({
-      ...editingPage,
-      components: syncedComponents,
-    });
-
-    toast.success({
-      title: component?.visible ? "Component Hidden" : "Component Visible",
-      description: `${component?.type || "Component"} is now ${component?.visible ? "hidden" : "visible"} on the page`,
-    });
-  };
-
-  // Delete a component
-  const handleDeleteComponent = (componentId: string) => {
-    const updatedComponents = editingPage.components.filter((c) => c.id !== componentId);
-
-    // Auto-sync header tabs if header exists
-    const syncedComponents = syncHeaderTabs(updatedComponents);
-
-    setEditingPage({
-      ...editingPage,
-      components: syncedComponents,
-    });
-
-    if (selectedComponentId === componentId) {
-      setSelectedComponentId(null);
-    }
-
-    const deletedComponent = editingPage.components.find((c) => c.id === componentId);
-    toast.success({
-      title: "Component Deleted",
-      description: `${deletedComponent?.type || "Component"} has been removed from the page`,
-    });
-  };
-
-  // Auto-sync header tabs with components and subpages
-  const syncHeaderTabs = (components: ComponentConfig[]) => {
+  // Auto-sync header tabs with components and subpages. Reads the page's
+  // subPages/slug via editingPageRef (rather than closing over `editingPage`
+  // directly) so this can stay a stable useCallback identity — handlers like
+  // handleToggleVisibility/handleDeleteComponent depend on it, and a fresh
+  // reference every render would defeat their own memoization.
+  const syncHeaderTabs = useCallback((components: ComponentConfig[]) => {
     const headerComponent = components.find((c) => c.type === "header");
     if (!headerComponent) return components;
 
@@ -473,22 +503,26 @@ export function EditableLandingPage({
     // Create tabs for each component (hash links)
     const componentTabs = visibleComponents.map((comp) => ({
       id: comp.id,
-      text: getComponentDisplayName(comp),
+      text: getNavTabLabel(comp),
       link: `#${comp.id}`,
     }));
 
     // Add subpage tabs to header — every page's sub-pages live under its own
     // slug uniformly (e.g. /my-page/blog), no special case for any page.
+    // Skipped once Navigation Settings has been configured for this page —
+    // that renders its own dedicated sub-page nav (MultiPageNav) on the
+    // public site, so the header doesn't need to duplicate those links too.
+    const currentPage = editingPageRef.current;
     let newTabs = [...componentTabs];
 
-    if ((editingPage.subPages?.length ?? 0) > 0) {
+    if (!currentPage.navigation && (currentPage.subPages?.length ?? 0) > 0) {
       const subPageTabs =
-        editingPage.subPages
+        currentPage.subPages
           ?.filter((sp) => sp.visible)
           .map((sp) => ({
             id: sp.id,
             text: sp.title,
-            link: `/${editingPage.slug}/${sp.slug}`,
+            link: `/${currentPage.slug}/${sp.slug}`,
           })) || [];
       newTabs = [...componentTabs, ...subPageTabs];
     }
@@ -503,30 +537,59 @@ export function EditableLandingPage({
     };
 
     return components.map((c) => (c.id === headerComponent.id ? updatedHeader : c));
-  };
+  }, []);
 
-  // Get display name for component type
-  const getComponentDisplayName = (component: ComponentConfig): string => {
-    const typeNames: Record<string, string> = {
-      hero: "Home",
-      features: "Features",
-      pricing: "Pricing",
-      testimonials: "Testimonials",
-      cta: "Get Started",
-      stats: "Stats",
-      team: "Team",
-      faq: "FAQ",
-      gallery: "Gallery",
-      "logo-cloud": "Partners",
-      contact: "Contact",
-      content: "About",
-      newsletter: "Newsletter",
-      video: "Video",
-    };
+  // Toggle component visibility
+  const handleToggleVisibility = useCallback(
+    (componentId: string) => {
+      const current = editingPageRef.current;
+      const component = current.components.find((c) => c.id === componentId);
+      const updatedComponents = current.components.map((c) =>
+        c.id === componentId ? { ...c, visible: !c.visible } : c
+      );
 
-    // Return component type name (short, clean text)
-    return typeNames[component.type] || component.type;
-  };
+      // Auto-sync header tabs if header exists
+      const syncedComponents = syncHeaderTabs(updatedComponents);
+
+      setEditingPage({
+        ...current,
+        components: syncedComponents,
+      });
+
+      toast.success({
+        title: component?.visible ? "Component Hidden" : "Component Visible",
+        description: `${component?.type || "Component"} is now ${component?.visible ? "hidden" : "visible"} on the page`,
+      });
+    },
+    [toast, syncHeaderTabs, setEditingPage]
+  );
+
+  // Delete a component
+  const handleDeleteComponent = useCallback(
+    (componentId: string) => {
+      const current = editingPageRef.current;
+      const updatedComponents = current.components.filter((c) => c.id !== componentId);
+
+      // Auto-sync header tabs if header exists
+      const syncedComponents = syncHeaderTabs(updatedComponents);
+
+      setEditingPage({
+        ...current,
+        components: syncedComponents,
+      });
+
+      if (selectedComponentIdRef.current === componentId) {
+        setSelectedComponentId(null);
+      }
+
+      const deletedComponent = current.components.find((c) => c.id === componentId);
+      toast.success({
+        title: "Component Deleted",
+        description: `${deletedComponent?.type || "Component"} has been removed from the page`,
+      });
+    },
+    [toast, syncHeaderTabs, setEditingPage]
+  );
 
   // Insert a component at a specific position (or append at the end when
   // targetIndex is null), enforcing the "one header per page" rule and
@@ -675,36 +738,40 @@ export function EditableLandingPage({
   };
 
   // Duplicate a component
-  const handleDuplicateComponent = (componentId: string) => {
-    const component = editingPage.components.find((c) => c.id === componentId);
-    if (!component) return;
+  const handleDuplicateComponent = useCallback(
+    (componentId: string) => {
+      const current = editingPageRef.current;
+      const component = current.components.find((c) => c.id === componentId);
+      if (!component) return;
 
-    const maxOrder = Math.max(0, ...editingPage.components.map((c) => c.order));
-    const duplicatedComponent: ComponentConfig = {
-      ...component,
-      id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      order: maxOrder + 1,
-    };
+      const maxOrder = Math.max(0, ...current.components.map((c) => c.order));
+      const duplicatedComponent: ComponentConfig = {
+        ...component,
+        id: `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        order: maxOrder + 1,
+      };
 
-    setEditingPage({
-      ...editingPage,
-      components: [...editingPage.components, duplicatedComponent],
-    });
+      setEditingPage({
+        ...current,
+        components: [...current.components, duplicatedComponent],
+      });
 
-    toast.success({
-      title: "Duplicated",
-      description: "Component duplicated successfully",
-    });
-  };
+      toast.success({
+        title: "Duplicated",
+        description: "Component duplicated successfully",
+      });
+    },
+    [toast, setEditingPage]
+  );
 
   // Open change template dialog
-  const handleOpenChangeTemplate = (componentId: string) => {
-    const component = editingPage.components.find((c) => c.id === componentId);
+  const handleOpenChangeTemplate = useCallback((componentId: string) => {
+    const component = editingPageRef.current.components.find((c) => c.id === componentId);
     if (component) {
       setComponentToChangeTemplate(component);
       setChangeTemplateDialogOpen(true);
     }
-  };
+  }, []);
 
   // Change template for a component with smart merging
   const handleChangeTemplate = (newConfig: Partial<ComponentConfig>) => {
@@ -968,44 +1035,52 @@ export function EditableLandingPage({
   };
 
   // Move component up
-  const handleMoveUp = (componentId: string) => {
-    const index = editingPage.components.findIndex((c) => c.id === componentId);
-    if (index <= 0) return;
+  const handleMoveUp = useCallback(
+    (componentId: string) => {
+      const current = editingPageRef.current;
+      const index = current.components.findIndex((c) => c.id === componentId);
+      if (index <= 0) return;
 
-    const newComponents = [...editingPage.components];
-    [newComponents[index - 1], newComponents[index]] = [
-      newComponents[index],
-      newComponents[index - 1],
-    ];
+      const newComponents = [...current.components];
+      [newComponents[index - 1], newComponents[index]] = [
+        newComponents[index],
+        newComponents[index - 1],
+      ];
 
-    // Update order numbers
-    const reorderedComponents = newComponents.map((c, i) => ({ ...c, order: i }));
+      // Update order numbers
+      const reorderedComponents = newComponents.map((c, i) => ({ ...c, order: i }));
 
-    setEditingPage({
-      ...editingPage,
-      components: reorderedComponents,
-    });
-  };
+      setEditingPage({
+        ...current,
+        components: reorderedComponents,
+      });
+    },
+    [setEditingPage]
+  );
 
   // Move component down
-  const handleMoveDown = (componentId: string) => {
-    const index = editingPage.components.findIndex((c) => c.id === componentId);
-    if (index < 0 || index >= editingPage.components.length - 1) return;
+  const handleMoveDown = useCallback(
+    (componentId: string) => {
+      const current = editingPageRef.current;
+      const index = current.components.findIndex((c) => c.id === componentId);
+      if (index < 0 || index >= current.components.length - 1) return;
 
-    const newComponents = [...editingPage.components];
-    [newComponents[index], newComponents[index + 1]] = [
-      newComponents[index + 1],
-      newComponents[index],
-    ];
+      const newComponents = [...current.components];
+      [newComponents[index], newComponents[index + 1]] = [
+        newComponents[index + 1],
+        newComponents[index],
+      ];
 
-    // Update order numbers
-    const reorderedComponents = newComponents.map((c, i) => ({ ...c, order: i }));
+      // Update order numbers
+      const reorderedComponents = newComponents.map((c, i) => ({ ...c, order: i }));
 
-    setEditingPage({
-      ...editingPage,
-      components: reorderedComponents,
-    });
-  };
+      setEditingPage({
+        ...current,
+        components: reorderedComponents,
+      });
+    },
+    [setEditingPage]
+  );
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
@@ -1201,7 +1276,10 @@ export function EditableLandingPage({
   };
 
   // Sort components by order
-  const sortedComponents = [...editingPage.components].sort((a, b) => a.order - b.order);
+  const sortedComponents = useMemo(
+    () => [...editingPage.components].sort((a, b) => a.order - b.order),
+    [editingPage.components]
+  );
 
   return (
     <EditModeProvider isEditMode={true}>
@@ -1298,18 +1376,17 @@ export function EditableLandingPage({
                     </TooltipProvider>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => setTimeout(() => setThemeSelectorOpen(true), 0)}
+                        onClick={() => setTimeout(() => setThemeManagerOpen(true), 0)}
                       >
                         <Palette className="h-4 w-4" />
                         Theme
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setTimeout(() => setCustomThemeCreatorOpen(true), 0)}
-                      >
-                        <Paintbrush className="h-4 w-4" />
-                        Custom Theme
-                      </DropdownMenuItem>
-                      {(editingPage.subPages?.length ?? 0) > 0 && onUpdateNavigation && (
+                      {/* Temporarily hidden — the separate nav bar it renders
+                          doesn't match the page's own Header styling, sits
+                          stacked awkwardly above it. Re-enable once that's
+                          resolved (the panel + public-site wiring underneath
+                          are otherwise working). */}
+                      {false && (editingPage.subPages?.length ?? 0) > 0 && onUpdateNavigation && (
                         <DropdownMenuItem
                           onClick={() => setTimeout(() => setNavigationSettingsOpen(true), 0)}
                         >
@@ -1318,10 +1395,10 @@ export function EditableLandingPage({
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        onClick={() => setTimeout(() => setExportImportOpen(true), 0)}
+                        onClick={() => setTimeout(() => setCustomCodeOpen(true), 0)}
                       >
-                        <Download className="h-4 w-4" />
-                        Export/Import
+                        <Code2 className="h-4 w-4" />
+                        Code
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setTimeout(() => setSettingsOpen(true), 0)}>
                         <Settings className="h-4 w-4" />
@@ -1395,37 +1472,22 @@ export function EditableLandingPage({
                         />
                         <EditableBlock
                           component={component}
+                          theme={theme}
                           isSelected={
                             selectedComponentId === component.id || activeSectionId === component.id
                           }
-                          onSelect={() => requestSelectComponent(component.id)}
-                          onToggleVisibility={() => handleToggleVisibility(component.id)}
-                          onDelete={() => handleDeleteComponent(component.id)}
-                          onDuplicate={() => handleDuplicateComponent(component.id)}
-                          onChangeTemplate={() => handleOpenChangeTemplate(component.id)}
-                          onMoveUp={() => handleMoveUp(component.id)}
-                          onMoveDown={() => handleMoveDown(component.id)}
+                          onSelect={requestSelectComponent}
+                          onToggleVisibility={handleToggleVisibility}
+                          onDelete={handleDeleteComponent}
+                          onDuplicate={handleDuplicateComponent}
+                          onChangeTemplate={handleOpenChangeTemplate}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
                           canMoveUp={index > 0}
                           canMoveDown={index < sortedComponents.length - 1}
                           isFirst={index === 0}
                           isLast={index === sortedComponents.length - 1}
-                        >
-                          {/* Special wrapper for header to ensure EditableBlock features work properly */}
-                          <div
-                            className={`w-full ${component.type === "header" ? "relative" : "overflow-hidden"}`}
-                            style={
-                              component.type === "header"
-                                ? {
-                                    // Contain header within EditableBlock bounds
-                                    position: "relative",
-                                    isolation: "isolate",
-                                  }
-                                : undefined
-                            }
-                          >
-                            <ComponentRenderer component={component} theme={theme} />
-                          </div>
-                        </EditableBlock>
+                        />
                       </div>
                     ))}
                     {sortedComponents.length > 0 && (
@@ -1512,9 +1574,18 @@ export function EditableLandingPage({
           onSave={handleSaveSettings}
         />
 
+        {/* Custom Code */}
+        <CustomCodeDialog
+          open={customCodeOpen}
+          onOpenChange={setCustomCodeOpen}
+          code={editingPage.customCode}
+          onSave={(code) => handleSaveSettings({ customCode: code })}
+        />
+
         {/* Export/Import Dialog */}
         <ExportImportDialog
           isOpen={exportImportOpen}
+          initialTab={exportImportTab}
           onClose={() => setExportImportOpen(false)}
           components={editingPage.components}
           onImport={(components) => {
@@ -1529,18 +1600,12 @@ export function EditableLandingPage({
           pageTitle={editingPage.title}
         />
 
-        {/* Theme Selector */}
-        <ThemeSelector
-          open={themeSelectorOpen}
-          onOpenChange={setThemeSelectorOpen}
+        {/* Theme (presets + custom creator, one Sheet) */}
+        <ThemeManager
+          open={themeManagerOpen}
+          onOpenChange={setThemeManagerOpen}
           currentThemeId={editingPage.theme}
           onThemeChange={handleThemeChange}
-        />
-
-        {/* Custom Theme Creator */}
-        <CustomThemeCreator
-          open={customThemeCreatorOpen}
-          onOpenChange={setCustomThemeCreatorOpen}
           onSaveTheme={handleSaveCustomTheme}
         />
 
