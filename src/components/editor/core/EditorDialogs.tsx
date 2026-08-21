@@ -25,6 +25,12 @@ interface EditorDialogsProps {
 
   onPublishConfirm: () => void;
   publishing: boolean;
+
+  // Guards the Home button against silently discarding autosave-pending
+  // edits — see hasUnsavedChanges in editor/page.tsx.
+  leaveToHomeOpen: boolean;
+  onLeaveToHomeOpenChange: (open: boolean) => void;
+  onConfirmLeaveToHome: () => void;
 }
 
 /** Every dialog AdminDashboard mounts that isn't tied to the header bar or
@@ -43,6 +49,9 @@ export function EditorDialogs({
   onPerformRestore,
   onPublishConfirm,
   publishing,
+  leaveToHomeOpen,
+  onLeaveToHomeOpenChange,
+  onConfirmLeaveToHome,
 }: EditorDialogsProps) {
   return (
     <>
@@ -118,6 +127,17 @@ export function EditorDialogs({
         title="Publish Failed"
         description="Failed to publish the landing page. Please try again or check the console for errors."
         variant="error"
+      />
+
+      {/* Home button — warns before leaving with autosave-pending edits */}
+      <ConfirmDialog
+        open={leaveToHomeOpen}
+        onOpenChange={onLeaveToHomeOpenChange}
+        title="Discard unsaved changes?"
+        description="This page has changes that haven't finished auto-saving yet. Leaving now may discard them."
+        confirmText="Leave anyway"
+        variant="destructive"
+        onConfirm={onConfirmLeaveToHome}
       />
     </>
   );
