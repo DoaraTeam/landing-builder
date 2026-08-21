@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { LandingConfig, LandingPage, LandingPageVersion, Theme } from "@/types/landing";
+import { LandingConfig, LandingPage, Theme } from "@/types/landing";
 import { TemplateSelector } from "@/components/editor/selectors/TemplateSelector";
 import { LandingPageTemplate } from "@/lib/landing-templates";
 import { buildPageFromTemplate, createPage } from "@/lib/create-page";
@@ -11,69 +11,22 @@ import {
 } from "@/components/editor/core/EditableLandingPage";
 import MultiPageEditor from "@/components/editor/core/MultiPageEditor";
 import VersionHistorySidebar from "@/components/editor/core/VersionHistorySidebar";
-import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
-import { AlertDialog } from "@/components/editor/dialogs/AlertDialog";
-import { SaveBeforeChangeDialog } from "@/components/editor/dialogs/SaveBeforeChangeDialog";
+import { EditorMenuBar } from "@/components/editor/core/EditorMenuBar";
+import { EditorDialogs } from "@/components/editor/core/EditorDialogs";
 import { KeyboardShortcutsHelp } from "@/components/editor/panels/KeyboardShortcutsHelp";
 import { RenamePageDialog } from "@/components/editor/dialogs/RenamePageDialog";
-import { OpenPageDialog } from "@/components/editor/dialogs/OpenPageDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useVersionHistory, type DialogState } from "@/hooks/use-version-history";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { LoadingScreen } from "@/components/loading-screen";
-import {
-  useKeyboardShortcuts,
-  COMMON_SHORTCUTS,
-  getShortcutKeys,
-} from "@/hooks/use-keyboard-shortcuts";
-import {
-  Home,
-  Eye,
-  Upload,
-  Download,
-  LayoutTemplate,
-  History,
-  FilePlus,
-  FolderOpen,
-  Copy,
-  Pencil,
-  Keyboard,
-  BookOpen,
-  Undo2,
-  Redo2,
-  Scissors,
-  ClipboardPaste,
-  CheckSquare,
-  Plus,
-} from "lucide-react";
+import { useKeyboardShortcuts, COMMON_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
+import { Home, Eye, Upload, History, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Guarantees the loading screen is visible for a bit even when the config
 // fetch resolves almost instantly, instead of flashing for a few ms.
 const MIN_LOADING_TIME_MS = 2000;
-
-// Plain "Ctrl+Shift+N"-style label for a File/Edit menu item's shortcut hint.
-const shortcutLabel = (shortcut: Parameters<typeof getShortcutKeys>[0]) =>
-  getShortcutKeys(shortcut).join("+");
-
-type DialogState = {
-  type:
-    | "none"
-    | "save-before-change"
-    | "save-before-restore"
-    | "publish"
-    | "publish-success"
-    | "publish-error";
-  open: boolean;
-};
 
 function AdminDashboard() {
   const router = useRouter();
@@ -114,19 +67,6 @@ function AdminDashboard() {
   // since only one of the two is ever mounted at a time.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [versionSidebarOpen, setVersionSidebarOpen] = useState(false);
-  // Version history is fetched lazily, only once the sidebar is opened for
-  // this page — it's no longer loaded eagerly with the page's draft/published
-  // content.
-  const [versions, setVersions] = useState<LandingPageVersion[]>([]);
-  // The version currently being previewed read-only; null = viewing/editing
-  // the live draft (still read-only while the sidebar is open, editable once
-  // it's closed).
-  const [previewedVersion, setPreviewedVersion] = useState<LandingPageVersion | null>(null);
-  // Set while the "save unversioned work before restoring?" guard is open, so
-  // its callbacks know which version to actually restore afterward.
-  const [pendingRestoreVersion, setPendingRestoreVersion] = useState<LandingPageVersion | null>(
-    null
-  );
   // Bubbled up from whichever EditableLandingPage instance is currently
   // mounted (single- or multi-page) — drives the Edit menu's Undo/Redo/
   // Cut/Copy/Paste items, which live here rather than inside that component.
@@ -148,15 +88,28 @@ function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
-  // Every page owns its own version history now — refetch whenever the
-  // sidebar is opened (rather than once, eagerly, up front).
-  useEffect(() => {
-    if (!versionSidebarOpen || !pageId) return;
-    fetch(`/api/landing-config/versions?pageId=${pageId}`)
-      .then((r) => r.json())
-      .then((data) => setVersions(data.versions || []))
-      .catch((error) => console.error("Error fetching versions:", error));
-  }, [versionSidebarOpen, pageId]);
+  const {
+    versions,
+    previewedVersion,
+    setPreviewedVersion,
+    pendingRestoreVersion,
+    setPendingRestoreVersion,
+    closeVersionSidebar,
+    handleVersionHistoryClick,
+    handleSaveVersion,
+    performRestore,
+    handleRestoreVersion,
+    handleDeleteVersion,
+  } = useVersionHistory({
+    pageId,
+    draftPage,
+    setDraftPage,
+    setDialogState,
+    toast,
+    versionSidebarOpen,
+    setVersionSidebarOpen,
+    setSidebarCollapsed,
+  });
 
   const fetchConfig = async () => {
     const startedAt = Date.now();
@@ -290,46 +243,6 @@ function AdminDashboard() {
     setTemplateSelectorOpen(true);
   };
 
-  // Closing the version sidebar re-expands the pages sidebar if it's still
-  // collapsed from being force-collapsed when the version sidebar opened.
-  const closeVersionSidebar = () => {
-    setVersionSidebarOpen(false);
-    setSidebarCollapsed(false);
-  };
-
-  const handleVersionHistoryClick = () => {
-    if (versionSidebarOpen) {
-      closeVersionSidebar();
-      setPreviewedVersion(null);
-    } else {
-      setVersionSidebarOpen(true);
-      setSidebarCollapsed(true);
-    }
-  };
-
-  const handleSaveVersion = async (name: string, description?: string) => {
-    if (!draftPage || !pageId) return;
-
-    const newVersion: LandingPageVersion = {
-      id: `version-${Date.now()}`,
-      name,
-      description,
-      page: { ...draftPage },
-      createdAt: new Date().toISOString(),
-    };
-
-    const response = await fetch("/api/landing-config/versions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pageId, version: newVersion }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      setVersions(data.versions);
-    }
-  };
-
   // File > Make a Copy — now that pages are independent, a copy is a real
   // new page (its own id/slug), not just a named version snapshot. Only the
   // new project's own name changes ("Copy of X") — the copied content's main
@@ -397,99 +310,6 @@ function AdminDashboard() {
     ],
     enabled: !!draftPage,
   });
-
-  // Whether the live draft differs from every existing saved version — if
-  // so, restoring an old version would silently lose it (it was never
-  // captured as a named snapshot, only continuously autosaved as the draft).
-  const hasUnversionedChanges = (page: LandingPage): boolean => {
-    const normalize = (p: LandingPage) => JSON.stringify({ ...p, updatedAt: undefined });
-    const currentNormalized = normalize(page);
-    return !versions.some((v) => normalize(v.page) === currentNormalized);
-  };
-
-  // Restoring never mutates or removes the source version — it only ever
-  // reads `version.page` to build a brand new version entry (fresh id/time,
-  // same content), which becomes the live draft. `extraVersion`, when given,
-  // is saved alongside it (used by the "save my unversioned work first"
-  // guard).
-  const performRestore = (version: LandingPageVersion, extraVersion?: LandingPageVersion) => {
-    // Every caller reaches this right as a Radix overlay (a DropdownMenu
-    // "Restore" item, or the save-before-restore Dialog) is closing itself —
-    // deferring to a macro-task lets that close/cleanup finish first, so it
-    // can't race with this handler's own state updates and leave
-    // document.body's pointer-events lock stuck.
-    setTimeout(async () => {
-      if (!pageId) return;
-
-      const restoredContent: LandingPage = JSON.parse(JSON.stringify(version.page));
-      const restoredDraft: LandingPage = {
-        ...restoredContent,
-        updatedAt: new Date().toISOString(),
-      };
-      const newVersion: LandingPageVersion = {
-        id: `version-${Date.now()}-restored`,
-        name: version.name,
-        description: version.description,
-        page: restoredContent,
-        createdAt: new Date().toISOString(),
-      };
-
-      const saveResponse = await fetch("/api/landing-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageId, draft: restoredDraft }),
-      });
-
-      if (!saveResponse.ok) return;
-
-      if (extraVersion) {
-        await fetch("/api/landing-config/versions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pageId, version: extraVersion }),
-        });
-      }
-
-      const versionResponse = await fetch("/api/landing-config/versions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageId, version: newVersion }),
-      });
-      const versionData = await versionResponse.json();
-
-      setVersions(versionData.versions);
-      setDraftPage(restoredDraft);
-      setPreviewedVersion(null);
-      closeVersionSidebar();
-      toast.success({
-        title: "Version restored",
-        description: `"${version.name}" is now the live draft.`,
-      });
-    }, 0);
-  };
-
-  const handleRestoreVersion = (version: LandingPageVersion) => {
-    if (draftPage && hasUnversionedChanges(draftPage)) {
-      setPendingRestoreVersion(version);
-      setDialogState({ type: "save-before-restore", open: true });
-    } else {
-      performRestore(version);
-    }
-  };
-
-  const handleDeleteVersion = async (versionId: string) => {
-    if (!pageId) return;
-
-    const response = await fetch(
-      `/api/landing-config/versions?pageId=${pageId}&versionId=${versionId}`,
-      { method: "DELETE" }
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      setVersions(data.versions);
-    }
-  };
 
   const handleSaveCustomTheme = async (theme: Theme, themeId: string) => {
     if (!config) return;
@@ -564,227 +384,33 @@ function AdminDashboard() {
                 </Tooltip>
               </TooltipProvider>
               <div className="h-6 w-px bg-gray-300" />
-              {siteName &&
-                (editingTitle ? (
-                  <input
-                    autoFocus
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    onBlur={commitTitleEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitTitleEdit();
-                      if (e.key === "Escape") setEditingTitle(false);
-                    }}
-                    className="text-sm font-medium text-gray-900 max-w-[16rem] rounded border border-blue-400 px-1 outline-none"
-                  />
-                ) : (
-                  <button
-                    onClick={() => {
-                      setTitleDraft(siteName);
-                      setEditingTitle(true);
-                    }}
-                    title="Click to rename"
-                    className="text-sm font-medium text-gray-900 truncate max-w-[16rem] rounded px-1 text-left hover:bg-gray-100"
-                  >
-                    {siteName}
-                  </button>
-                ))}
-              {draftPage && <div className="h-6 w-px bg-gray-300" />}
-              {draftPage && (
-                <div className="flex items-center gap-0.5">
-                  <DropdownMenu
-                    open={openMenu === "file"}
-                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "file" : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
-                      >
-                        File
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setTimeout(() => {
-                            setTemplateSelectorIntent("create");
-                            setTemplateSelectorOpen(true);
-                          }, 0)
-                        }
-                      >
-                        <FilePlus className="h-4 w-4" />
-                        New
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.NEW_PAGE)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setTimeout(() => setOpenPageDialogOpen(true), 0)}
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                        Open
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.OPEN_PAGE)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleMakeACopy()}>
-                        <Copy className="h-4 w-4" />
-                        Make a Copy
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.MAKE_A_COPY)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setTimeout(() => setRenameOpen(true), 0)}>
-                        <Pencil className="h-4 w-4" />
-                        Rename
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.RENAME_PAGE)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu
-                    open={openMenu === "edit"}
-                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "edit" : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
-                      >
-                        Edit
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        disabled={!editMenuState.canUndo}
-                        onClick={() => editMenuState.undo()}
-                      >
-                        <Undo2 className="h-4 w-4" />
-                        Undo
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.UNDO)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={!editMenuState.canRedo}
-                        onClick={() => editMenuState.redo()}
-                      >
-                        <Redo2 className="h-4 w-4" />
-                        Redo
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.REDO)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        disabled={!editMenuState.canCut}
-                        onClick={() => editMenuState.cut()}
-                      >
-                        <Scissors className="h-4 w-4" />
-                        Cut
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.CUT)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={!editMenuState.canCopy}
-                        onClick={() => editMenuState.copy()}
-                      >
-                        <Copy className="h-4 w-4" />
-                        Copy
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.COPY)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={!editMenuState.canPaste}
-                        onClick={() => editMenuState.paste()}
-                      >
-                        <ClipboardPaste className="h-4 w-4" />
-                        Paste
-                        <DropdownMenuShortcut>
-                          {shortcutLabel(COMMON_SHORTCUTS.PASTE)}
-                        </DropdownMenuShortcut>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem disabled>
-                        <CheckSquare className="h-4 w-4" />
-                        Select All
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu
-                    open={openMenu === "template"}
-                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "template" : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
-                      >
-                        Template
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        onClick={() => setTimeout(() => handleChangeTemplateClick(), 0)}
-                      >
-                        <LayoutTemplate className="h-4 w-4 text-amber-600" />
-                        Change Template
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setTimeout(() => setExportImportRequest({ tab: "export" }), 0)
-                        }
-                      >
-                        <Download className="h-4 w-4" />
-                        Export
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setTimeout(() => setExportImportRequest({ tab: "import" }), 0)
-                        }
-                      >
-                        <Upload className="h-4 w-4" />
-                        Import
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu
-                    open={openMenu === "help"}
-                    onOpenChange={(isOpen) => setOpenMenu(isOpen ? "help" : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-gray-700 hover:bg-gray-100 data-[state=open]:bg-gray-200 data-[state=open]:text-gray-900"
-                      >
-                        Help
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => setTimeout(() => setHelpOpen(true), 0)}>
-                        <Keyboard className="h-4 w-4 text-gray-600" />
-                        Keyboard Shortcuts
-                      </DropdownMenuItem>
-                      <DropdownMenuItem disabled>
-                        <BookOpen className="h-4 w-4" />
-                        Documentation
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+              {siteName && draftPage && (
+                <EditorMenuBar
+                  siteName={siteName}
+                  editingTitle={editingTitle}
+                  titleDraft={titleDraft}
+                  onTitleDraftChange={setTitleDraft}
+                  onStartEditingTitle={() => {
+                    setTitleDraft(siteName);
+                    setEditingTitle(true);
+                  }}
+                  onCancelEditingTitle={() => setEditingTitle(false)}
+                  onCommitTitleEdit={commitTitleEdit}
+                  openMenu={openMenu}
+                  onOpenMenuChange={setOpenMenu}
+                  onNewPage={() => {
+                    setTemplateSelectorIntent("create");
+                    setTemplateSelectorOpen(true);
+                  }}
+                  onOpenPage={() => setOpenPageDialogOpen(true)}
+                  onMakeACopy={handleMakeACopy}
+                  onRenamePage={() => setRenameOpen(true)}
+                  editMenuState={editMenuState}
+                  onChangeTemplateClick={handleChangeTemplateClick}
+                  onExportRequest={() => setExportImportRequest({ tab: "export" })}
+                  onImportRequest={() => setExportImportRequest({ tab: "import" })}
+                  onHelpClick={() => setHelpOpen(true)}
+                />
               )}
             </div>
 
@@ -1010,78 +636,20 @@ function AdminDashboard() {
         />
       )}
 
-      {/* File > Open */}
-      <OpenPageDialog
-        open={openPageDialogOpen}
-        onOpenChange={setOpenPageDialogOpen}
+      <EditorDialogs
+        openPageDialogOpen={openPageDialogOpen}
+        onOpenPageDialogOpenChange={setOpenPageDialogOpen}
         onSelectPage={(id) => router.push(`/editor?pageId=${id}`)}
-      />
-
-      {/* Save Before Change Dialog */}
-      <SaveBeforeChangeDialog
-        open={dialogState.type === "save-before-change" && dialogState.open}
-        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-        onSaveAndContinue={handleSaveAndChangeTemplate}
-        onContinueWithoutSaving={handleChangeTemplateWithoutSaving}
-        actionName="change template"
-      />
-
-      {/* Save Before Restore Dialog — guards Restore against silently losing
-          draft changes that were never captured as a named version */}
-      <SaveBeforeChangeDialog
-        open={dialogState.type === "save-before-restore" && dialogState.open}
-        onOpenChange={(open) => {
-          setDialogState({ ...dialogState, open });
-          if (!open) setPendingRestoreVersion(null);
-        }}
-        onSaveAndContinue={(name, description) => {
-          if (!pendingRestoreVersion || !draftPage) return;
-          const extraVersion: LandingPageVersion = {
-            id: `version-${Date.now()}-saved`,
-            name,
-            description,
-            page: { ...draftPage },
-            createdAt: new Date().toISOString(),
-          };
-          performRestore(pendingRestoreVersion, extraVersion);
-          setPendingRestoreVersion(null);
-        }}
-        onContinueWithoutSaving={() => {
-          if (!pendingRestoreVersion) return;
-          performRestore(pendingRestoreVersion);
-          setPendingRestoreVersion(null);
-        }}
-        actionName="restore this version"
-      />
-
-      {/* Confirmation Dialogs */}
-      <ConfirmDialog
-        open={dialogState.type === "publish" && dialogState.open}
-        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-        title="Publish Landing Page"
-        description="Are you sure you want to publish this landing page? It will be visible at its live URL and replace any existing published version of this page."
-        confirmText="Publish"
-        cancelText="Cancel"
-        onConfirm={handlePublishConfirm}
-        variant="success"
-        loading={publishing}
-      />
-
-      {/* Alert Dialogs */}
-      <AlertDialog
-        open={dialogState.type === "publish-success" && dialogState.open}
-        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-        title="Published Successfully!"
-        description="Your landing page has been published successfully."
-        variant="success"
-      />
-
-      <AlertDialog
-        open={dialogState.type === "publish-error" && dialogState.open}
-        onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-        title="Publish Failed"
-        description="Failed to publish the landing page. Please try again or check the console for errors."
-        variant="error"
+        dialogState={dialogState}
+        onDialogStateChange={setDialogState}
+        onSaveAndChangeTemplate={handleSaveAndChangeTemplate}
+        onChangeTemplateWithoutSaving={handleChangeTemplateWithoutSaving}
+        draftPage={draftPage}
+        pendingRestoreVersion={pendingRestoreVersion}
+        onClearPendingRestoreVersion={() => setPendingRestoreVersion(null)}
+        onPerformRestore={performRestore}
+        onPublishConfirm={handlePublishConfirm}
+        publishing={publishing}
       />
     </div>
   );
