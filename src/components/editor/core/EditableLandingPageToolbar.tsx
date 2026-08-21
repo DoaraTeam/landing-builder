@@ -41,10 +41,8 @@ interface EditableLandingPageToolbarProps {
   onAddSection: () => void;
 
   onOpenTheme: () => void;
-  // The Navigation Settings menu item is temporarily hidden (see the
-  // `false &&` below) — the underlying condition is preserved so it's a
-  // one-line change to bring back once the styling clash it was hidden for
-  // is resolved.
+  // True for multi-page sites (only they have a Navigation Settings panel
+  // to configure) with an onUpdateNavigation handler available.
   showNavigationMenuItem: boolean;
   onOpenNavigationSettings: () => void;
   onOpenCustomCode: () => void;
@@ -167,12 +165,7 @@ export function EditableLandingPageToolbar({
                     <Palette className="h-4 w-4" />
                     Theme
                   </DropdownMenuItem>
-                  {/* Temporarily hidden — the separate nav bar it renders
-                      doesn't match the page's own Header styling, sits
-                      stacked awkwardly above it. Re-enable once that's
-                      resolved (the panel + public-site wiring underneath
-                      are otherwise working). */}
-                  {false && showNavigationMenuItem && (
+                  {showNavigationMenuItem && (
                     <DropdownMenuItem onClick={() => setTimeout(onOpenNavigationSettings, 0)}>
                       <NavigationIcon className="h-4 w-4" />
                       Navigation
