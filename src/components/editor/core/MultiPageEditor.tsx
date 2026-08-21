@@ -28,6 +28,10 @@ interface MultiPageEditorProps {
   // Passed straight through to whichever page is currently mounted — see
   // EditableLandingPage's exportImportRequest.
   exportImportRequest?: { tab: "export" | "import" } | null;
+  // Passed straight through to whichever page is currently mounted — see
+  // EditableLandingPage's onUnsavedChangesChange. Only one instance is ever
+  // mounted at a time, so no aggregation needed here.
+  onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
 }
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "landing-builder:page-sidebar-collapsed";
@@ -42,6 +46,7 @@ export default function MultiPageEditor({
   readOnly = false,
   onEditMenuStateChange,
   exportImportRequest,
+  onUnsavedChangesChange,
 }: MultiPageEditorProps) {
   const [editingPage, setEditingPage] = useState<LandingPage>(page);
   const [activePageId, setActivePageId] = useState<string | null>(MAIN_PAGE_ID);
@@ -206,6 +211,7 @@ export default function MultiPageEditor({
             reorderRequest={reorderRequest}
             exportImportRequest={exportImportRequest}
             readOnly={readOnly}
+            onUnsavedChangesChange={onUnsavedChangesChange}
           />
         )}
 
@@ -228,6 +234,7 @@ export default function MultiPageEditor({
             reorderRequest={reorderRequest}
             exportImportRequest={exportImportRequest}
             readOnly={readOnly}
+            onUnsavedChangesChange={onUnsavedChangesChange}
           />
         )}
 

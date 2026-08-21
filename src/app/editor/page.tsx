@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { LandingConfig, LandingPage, Theme } from "@/types/landing";
 import { TemplateSelector } from "@/components/editor/selectors/TemplateSelector";
 import { LandingPageTemplate } from "@/lib/landing-templates";
@@ -82,11 +82,61 @@ function AdminDashboard() {
   const [exportImportRequest, setExportImportRequest] = useState<{
     tab: "export" | "import";
   } | null>(null);
+  // Bubbled up from whichever EditableLandingPage instance is currently
+  // mounted — true whenever autosave hasn't caught up to the latest edit
+  // yet. Drives both the beforeunload warning below and the Home button's
+  // own confirm dialog.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [leaveToHomeOpen, setLeaveToHomeOpen] = useState(false);
 
   useEffect(() => {
     fetchConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
+
+  // Reload/close-tab: only the browser's own generic confirmation can be
+  // shown here (modern browsers ignore any custom message for security
+  // reasons) — setting returnValue is what triggers it.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Read inside the popstate handler below (registered once, on mount) so
+  // it always sees the latest value instead of closing over whatever
+  // hasUnsavedChanges was at mount time.
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Browser Back button: pushes a duplicate history entry so the first Back
+  // press lands here (a popstate we can act on) instead of immediately
+  // leaving. With no unsaved changes, let a real Back through immediately;
+  // otherwise re-arm the trap and ask via the same dialog the Home button
+  // uses.
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      if (window.location.pathname !== "/editor") return; // already navigated away
+
+      if (hasUnsavedChangesRef.current) {
+        window.history.pushState(null, "", window.location.href); // re-arm
+        setLeaveToHomeOpen(true);
+      } else {
+        window.history.back();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const {
     versions,
@@ -374,7 +424,13 @@ function AdminDashboard() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => router.push("/pages")}
+                      onClick={() => {
+                        if (hasUnsavedChanges) {
+                          setLeaveToHomeOpen(true);
+                        } else {
+                          router.push("/pages");
+                        }
+                      }}
                       className="h-8 w-8 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     >
                       <Home className="h-4 w-4" />
@@ -549,6 +605,7 @@ function AdminDashboard() {
                   onEditMenuStateChange={setEditMenuState}
                   exportImportRequest={exportImportRequest}
                   readOnly={versionSidebarOpen}
+                  onUnsavedChangesChange={setHasUnsavedChanges}
                 />
               )}
 
@@ -650,6 +707,12 @@ function AdminDashboard() {
         onPerformRestore={performRestore}
         onPublishConfirm={handlePublishConfirm}
         publishing={publishing}
+        leaveToHomeOpen={leaveToHomeOpen}
+        onLeaveToHomeOpenChange={setLeaveToHomeOpen}
+        onConfirmLeaveToHome={() => {
+          setLeaveToHomeOpen(false);
+          router.push("/pages");
+        }}
       />
     </div>
   );

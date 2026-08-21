@@ -14,9 +14,19 @@ interface SEOEditorProps {
   config: SEOConfig;
   onChange: (config: SEOConfig) => void;
   disabled?: boolean;
+  // Forwarded straight through to OpenGraphFields — see
+  // docs/editor-input-validation-plan.md. SEOEditor itself doesn't compute
+  // this; the host dialog (PageSettingsModal/SubPageFormDialog) does, since
+  // it's also the one deciding whether to block its own Save button on it.
+  ogImageErrors?: Record<number, { width?: string; height?: string }>;
 }
 
-export default function SEOEditor({ config, onChange, disabled = false }: SEOEditorProps) {
+export default function SEOEditor({
+  config,
+  onChange,
+  disabled = false,
+  ogImageErrors,
+}: SEOEditorProps) {
   const [activeTab, setActiveTab] = useState("basic");
 
   const updateConfig = (updates: Partial<SEOConfig>) => {
@@ -52,7 +62,12 @@ export default function SEOEditor({ config, onChange, disabled = false }: SEOEdi
         </TabsContent>
 
         <TabsContent value="opengraph" className="space-y-4 mt-4">
-          <OpenGraphFields config={config} onChange={updateConfig} disabled={disabled} />
+          <OpenGraphFields
+            config={config}
+            onChange={updateConfig}
+            disabled={disabled}
+            imageErrors={ogImageErrors}
+          />
         </TabsContent>
 
         <TabsContent value="twitter" className="space-y-4 mt-4">

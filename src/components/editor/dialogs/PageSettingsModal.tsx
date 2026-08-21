@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LandingPage, LandingConfig, LoadingConfig, PageSummary, SEOConfig } from "@/types/landing";
 import LoadingConfigEditor from "@/components/editor/editors/fields/LoadingConfigEditor";
 import SEOEditor from "@/components/editor/editors/fields/SEOEditor";
+import { validateOpenGraphImages } from "@/lib/field-validators";
 
 interface PageSettingsModalProps {
   open: boolean;
@@ -64,6 +65,15 @@ export default function PageSettingsModal({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Recomputed live from seoConfig, not just at Save — see
+  // docs/editor-input-validation-plan.md. Only guards against values that
+  // would corrupt actual runtime number math (NaN), not content the user
+  // is trusted to get right themselves.
+  const ogImageErrors = useMemo(
+    () => validateOpenGraphImages(seoConfig.openGraph?.images),
+    [seoConfig.openGraph?.images]
+  );
+  const hasOgImageErrors = Object.keys(ogImageErrors).length > 0;
   // For the slug-uniqueness check below. Fetched from the lightweight
   // summaries endpoint rather than requiring the full `config.pages` (every
   // other page's entire draft/published component tree, images included) —
@@ -121,7 +131,7 @@ export default function PageSettingsModal({
   };
 
   const handleSave = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || hasOgImageErrors) return;
 
     setLoading(true);
     setError("");
@@ -149,23 +159,23 @@ export default function PageSettingsModal({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>Page Settings</SheetTitle>
           <SheetDescription>
             Update page metadata, SEO settings, and publishing status.
           </SheetDescription>
         </SheetHeader>
 
-        <Tabs defaultValue="basic" className="py-4">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="basic" className="flex-1 flex flex-col min-h-0 py-4">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
             <TabsTrigger value="basic">Basic</TabsTrigger>
             <TabsTrigger value="seo">SEO</TabsTrigger>
             <TabsTrigger value="loading">Loading</TabsTrigger>
           </TabsList>
 
           {/* Basic Tab */}
-          <TabsContent value="basic" className="space-y-6 pt-4">
+          <TabsContent value="basic" className="flex-1 overflow-y-auto min-h-0 space-y-6 pt-4">
             <div className="space-y-4">
               <h3 className="font-semibold text-sm">Basic Information</h3>
 
@@ -250,28 +260,33 @@ export default function PageSettingsModal({
           </TabsContent>
 
           {/* SEO Tab */}
-          <TabsContent value="seo" className="space-y-6 pt-4">
-            <SEOEditor config={seoConfig} onChange={setSeoConfig} disabled={loading} />
+          <TabsContent value="seo" className="flex-1 overflow-y-auto min-h-0 space-y-6 pt-4">
+            <SEOEditor
+              config={seoConfig}
+              onChange={setSeoConfig}
+              disabled={loading}
+              ogImageErrors={ogImageErrors}
+            />
           </TabsContent>
 
           {/* Loading Tab */}
-          <TabsContent value="loading" className="space-y-6 pt-4">
+          <TabsContent value="loading" className="flex-1 overflow-y-auto min-h-0 space-y-6 pt-4">
             <LoadingConfigEditor config={loadingConfig} onChange={setLoadingConfig} />
           </TabsContent>
         </Tabs>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <div className="flex-shrink-0 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
-        <SheetFooter>
+        <SheetFooter className="flex-shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
+          <Button onClick={handleSave} disabled={loading || hasOgImageErrors}>
             {loading ? "Saving..." : "Save Settings"}
           </Button>
         </SheetFooter>

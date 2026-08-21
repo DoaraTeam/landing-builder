@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ComponentConfig } from "@/types/landing";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,24 +35,9 @@ import { VideoContentFields } from "@/components/editor/editors/fields/component
 import { CommonContentFields } from "@/components/editor/editors/fields/component-types/CommonContentFields";
 import { ConfirmDialog } from "@/components/editor/dialogs/ConfirmDialog";
 import { ensureAnimation } from "@/lib/animation-defaults";
+import { setNestedValue } from "@/lib/object-utils";
+import { validateAnimationConfig } from "@/lib/field-validators";
 import { SubPage } from "@/types/landing";
-
-// Immutable nested-path set that only copies objects along the touched
-// path — unlike JSON.parse(JSON.stringify(config)), it doesn't walk/clone
-// the entire config (including untouched arrays like testimonials/features
-// or embedded base64 images) on every single field edit.
-function setNestedValue(
-  obj: Record<string, unknown>,
-  keys: string[],
-  value: unknown
-): Record<string, unknown> {
-  const [head, ...rest] = keys;
-  if (rest.length === 0) {
-    return { ...obj, [head]: value };
-  }
-  const nested = (obj[head] as Record<string, unknown>) ?? {};
-  return { ...obj, [head]: setNestedValue(nested, rest, value) };
-}
 
 interface ComponentEditorProps {
   // null while closed. Kept in the tree (parent no longer conditionally
@@ -177,8 +162,19 @@ export function ComponentEditor({
     setIsDirty(true);
   };
 
+  // Recomputed from `config` on every change (not just at Save) so a bad
+  // value shows red the moment it's typed — not just guessed-at content
+  // (empty strings, casual URLs) but values that would corrupt actual
+  // runtime number math (NaN), which the user can't visually catch by
+  // just previewing the page. See docs/editor-input-validation-plan.md.
+  const animationErrors = useMemo(
+    () => validateAnimationConfig(config.animation as { duration?: unknown; delay?: unknown }),
+    [config.animation]
+  );
+  const hasBlockingErrors = Object.keys(animationErrors).length > 0;
+
   const handleSave = () => {
-    if (!component) return;
+    if (!component || hasBlockingErrors) return;
     onUpdate({ ...component, config });
     setIsDirty(false);
   };
@@ -778,6 +774,7 @@ export function ComponentEditor({
               <AnimationEditor
                 value={config.animation as { type?: string; duration?: number; delay?: number }}
                 onChange={(field, value) => handleChange(`animation.${field}`, value)}
+                errors={animationErrors}
               />
             )}
           </TabsContent>
@@ -788,7 +785,7 @@ export function ComponentEditor({
           <Button variant="outline" onClick={handleRequestClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} className="flex-1">
+          <Button onClick={handleSave} disabled={hasBlockingErrors} className="flex-1">
             Save Changes
           </Button>
         </div>

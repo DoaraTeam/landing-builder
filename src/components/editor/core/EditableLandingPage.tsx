@@ -92,6 +92,10 @@ interface EditableLandingPageProps {
   // component selection/ComponentEditor, autosave, keyboard shortcuts) is
   // inert. The canvas still renders live components, just non-interactively.
   readOnly?: boolean;
+  // Bubbles up autosave's hasUnsavedChanges so the outer editor chrome can
+  // warn before a reload/tab-close/navigate-away would silently drop
+  // whatever hasn't been autosaved yet.
+  onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
 }
 
 // A zero-height hover strip rendered between (and around) sections. Hovering
@@ -138,6 +142,7 @@ export function EditableLandingPage({
   reorderRequest,
   exportImportRequest,
   readOnly = false,
+  onUnsavedChangesChange,
 }: EditableLandingPageProps) {
   const {
     state: editingPage,
@@ -245,6 +250,18 @@ export function EditableLandingPage({
     delay: 5000, // Auto-save every 5 seconds
     enabled: !readOnly,
   });
+
+  // Bubble hasUnsavedChanges up so the outer editor chrome can warn before a
+  // reload/tab-close/navigate-to-home would silently drop it. Reports false
+  // on unmount (e.g. switching away to a different page) so a stale "true"
+  // never lingers after the instance that owned it is gone.
+  useEffect(() => {
+    onUnsavedChangesChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
+  useEffect(() => {
+    return () => onUnsavedChangesChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // The page-tree sidebar drag-reordered this page's sections — reorder the
   // live components (preserving their current, possibly-unsaved config) and

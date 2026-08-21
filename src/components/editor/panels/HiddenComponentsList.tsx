@@ -35,13 +35,6 @@ const getComponentName = (type: string) => {
     content: "Content",
     newsletter: "Newsletter",
     video: "Video",
-    "gym-hero": "Gym Hero",
-    "gym-services": "Gym Services",
-    "gym-pricing": "Gym Pricing",
-    "gym-testimonials": "Gym Testimonials",
-    "gym-navigation": "Gym Navigation",
-    "gym-about": "Gym About",
-    "gym-contact": "Gym Contact",
   };
   return names[type] || type;
 };

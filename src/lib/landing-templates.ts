@@ -3784,6 +3784,422 @@ export const landingPageTemplates: LandingPageTemplate[] = [
       },
     ],
   },
+  {
+    id: "crossfit-box",
+    name: "IronBox CrossFit",
+    description: "Bold landing page for CrossFit boxes, functional fitness, and strength gyms",
+    category: "business",
+    components: [
+      {
+        type: "hero",
+        visible: true,
+        config: {
+          title: "Forge Strength. Build Community.",
+          subtitle: "FUNCTIONAL FITNESS • OLYMPIC LIFTING • CONDITIONING",
+          description:
+            "IronBox is more than a gym — it's a community of athletes pushing each other to be stronger every day. Coached programming, no ego, all effort.",
+          primaryCTA: {
+            text: "Book a Free WOD",
+            link: "#trial",
+            style: "primary" as const,
+          },
+          secondaryCTA: {
+            text: "See Our Programs",
+            link: "#programs",
+            style: "outline" as const,
+          },
+          image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80",
+          alignment: "left" as const,
+          background: {
+            type: "solid" as const,
+            color: "#0a0a0a",
+          },
+          animation: {
+            type: "fadeInUp" as const,
+            duration: 800,
+            delay: 0,
+          },
+          spacing: {
+            padding: "2xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "features",
+        visible: true,
+        config: {
+          title: "Our Programs",
+          subtitle: "Everything you need to get stronger",
+          description: "Coached programming for every level, from first-timers to competitors",
+          features: [
+            {
+              title: "CrossFit WOD Classes",
+              description: "Constantly varied, high-intensity workouts coached in small groups",
+              icon: "🔥",
+            },
+            {
+              title: "Olympic Weightlifting",
+              description: "Dedicated technique work on the snatch and clean & jerk",
+              icon: "🏋️",
+            },
+            {
+              title: "Strength & Conditioning",
+              description: "Build a foundation of raw strength with structured progressions",
+              icon: "💪",
+            },
+            {
+              title: "Nutrition Coaching",
+              description: "Fuel your training with a plan built around your goals",
+              icon: "🥗",
+            },
+            {
+              title: "Open Gym Access",
+              description: "Extra time on the platform to work on your own goals",
+              icon: "🕐",
+            },
+            {
+              title: "Community Competitions",
+              description: "In-house throwdowns and team events all year round",
+              icon: "🏆",
+            },
+          ],
+          layout: "grid" as const,
+          columns: 3,
+          background: {
+            type: "solid" as const,
+            color: "#f9fafb",
+          },
+          animation: {
+            type: "fadeInUp" as const,
+            duration: 600,
+            delay: 100,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "stats",
+        visible: true,
+        config: {
+          title: "The IronBox Community",
+          subtitle: "BY THE NUMBERS",
+          description: "A decade of building stronger athletes",
+          stats: [
+            {
+              id: "1",
+              value: "500",
+              label: "Athletes Trained",
+              suffix: "+",
+              prefix: "",
+            },
+            {
+              id: "2",
+              value: "12",
+              label: "Certified Coaches",
+              suffix: "",
+              prefix: "",
+            },
+            {
+              id: "3",
+              value: "35",
+              label: "Classes Per Week",
+              suffix: "+",
+              prefix: "",
+            },
+            {
+              id: "4",
+              value: "10",
+              label: "Years Established",
+              suffix: "",
+              prefix: "",
+            },
+          ],
+          layout: "grid" as const,
+          columns: 4,
+          background: {
+            type: "solid" as const,
+            color: "#0a0a0a",
+          },
+          animation: {
+            type: "fadeIn" as const,
+            duration: 600,
+            delay: 0,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "pricing",
+        visible: true,
+        config: {
+          title: "Membership Plans",
+          subtitle: "Train your way",
+          description: "No contracts, no hidden fees — cancel anytime",
+          plans: [
+            {
+              id: "1",
+              name: "Drop-In",
+              price: "$25",
+              period: "/class",
+              description: "Visiting or just trying it out",
+              features: ["Single class access", "All equipment included", "No commitment"],
+              cta: {
+                text: "Drop In",
+                link: "#signup",
+              },
+              highlighted: false,
+            },
+            {
+              id: "2",
+              name: "Unlimited",
+              price: "$149",
+              period: "/month",
+              description: "Our most popular plan",
+              features: [
+                "Unlimited classes",
+                "Open gym access",
+                "1 nutrition check-in/month",
+                "Access to all programming",
+                "Member community events",
+              ],
+              cta: {
+                text: "Join Now",
+                link: "#signup",
+              },
+              highlighted: true,
+              badge: "Most Popular",
+            },
+            {
+              id: "3",
+              name: "Founding Athlete",
+              price: "$199",
+              period: "/month",
+              description: "For athletes all-in on their training",
+              features: [
+                "Everything in Unlimited",
+                "2 personal coaching sessions/month",
+                "Priority competition entry",
+                "Custom programming review",
+                "Founding member merch",
+              ],
+              cta: {
+                text: "Go All-In",
+                link: "#signup",
+              },
+              highlighted: false,
+            },
+          ],
+          background: {
+            type: "solid" as const,
+            color: "#ffffff",
+          },
+          animation: {
+            type: "fadeIn" as const,
+            duration: 600,
+            delay: 0,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "testimonials",
+        visible: true,
+        config: {
+          title: "Real Athletes, Real Results",
+          subtitle: "What our members say",
+          description: "The IronBox community in their own words",
+          testimonials: [
+            {
+              id: "1",
+              content:
+                "I walked in with zero experience and terrified of barbells. A year later I pulled my first 200lb deadlift. The coaching here is next level.",
+              author: "Marcus Reid",
+              role: "Member since 2023",
+              company: "First 200lb deadlift",
+              rating: 5,
+              avatar: "https://i.pravatar.cc/150?img=12",
+            },
+            {
+              id: "2",
+              content:
+                "Best community I've ever trained with. Everyone pushes each other but nobody judges — that's rare to find in a gym.",
+              author: "Priya Nair",
+              role: "Unlimited Member",
+              company: "3x in-house competitor",
+              rating: 5,
+              avatar: "https://i.pravatar.cc/150?img=13",
+            },
+            {
+              id: "3",
+              content:
+                "The programming is smart and the coaches actually watch your form. I've made more progress in 6 months here than 2 years at a regular gym.",
+              author: "Daniel Osei",
+              role: "Founding Athlete",
+              company: "Competitive lifter",
+              rating: 5,
+              avatar: "https://i.pravatar.cc/150?img=14",
+            },
+          ],
+          layout: "grid" as const,
+          background: {
+            type: "solid" as const,
+            color: "#f9fafb",
+          },
+          animation: {
+            type: "fadeInUp" as const,
+            duration: 600,
+            delay: 0,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "faq",
+        visible: true,
+        config: {
+          title: "New to CrossFit?",
+          subtitle: "GOT QUESTIONS?",
+          description: "Everything you need to know before your first class",
+          faqs: [
+            {
+              id: "1",
+              question: "Do I need experience to start?",
+              answer:
+                "Not at all. Every new athlete starts with our onboarding program where a coach walks you through the fundamental movements before you join regular classes. Most of our members had never touched a barbell before joining.",
+            },
+            {
+              id: "2",
+              question: "What should I bring to my first class?",
+              answer:
+                "Comfortable athletic clothing, a water bottle, and a towel. We provide all the equipment — barbells, kettlebells, rings, rowers, and more. Just show up ready to work.",
+            },
+            {
+              id: "3",
+              question: "Can I try a class before joining?",
+              answer:
+                "Yes! Book a free intro WOD using the button at the top of the page. You'll get a full class experience with one of our coaches, no commitment required.",
+            },
+            {
+              id: "4",
+              question: "How intense are the workouts really?",
+              answer:
+                "Every workout is scaled to your fitness level. Our coaches adjust weight, reps, and movements so beginners and competitive athletes can train in the same class safely and effectively.",
+            },
+            {
+              id: "5",
+              question: "Is there a contract?",
+              answer:
+                "No long-term contracts on any plan. Memberships are month-to-month and you can cancel anytime with 30 days' notice.",
+            },
+          ],
+          layout: "accordion" as const,
+          columns: 1,
+          background: {
+            type: "solid" as const,
+            color: "#ffffff",
+          },
+          animation: {
+            type: "fadeInUp" as const,
+            duration: 600,
+            delay: 0,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "cta",
+        visible: true,
+        config: {
+          title: "Ready to Join the Box?",
+          description: "Book your free intro WOD today — no experience, no equipment required.",
+          primaryCTA: {
+            text: "Book a Free WOD",
+            link: "#trial",
+            style: "primary" as const,
+          },
+          secondaryCTA: {
+            text: "View Schedule",
+            link: "#schedule",
+            style: "outline" as const,
+          },
+          background: {
+            type: "solid" as const,
+            color: "#0a0a0a",
+          },
+          animation: {
+            type: "fadeIn" as const,
+            duration: 600,
+            delay: 0,
+          },
+          spacing: {
+            padding: "xl" as const,
+            margin: "none" as const,
+          },
+        },
+      },
+      {
+        type: "footer",
+        visible: true,
+        config: {
+          logo: {
+            text: "IronBox CrossFit",
+            image: "",
+          },
+          description: "Forge strength. Build community.",
+          links: [
+            {
+              title: "Training",
+              items: [
+                { text: "Programs", link: "#programs" },
+                { text: "Schedule", link: "#schedule" },
+                { text: "Coaches", link: "#coaches" },
+                { text: "Membership", link: "#pricing" },
+              ],
+            },
+            {
+              title: "Community",
+              items: [
+                { text: "Competitions", link: "#competitions" },
+                { text: "Success Stories", link: "#testimonials" },
+                { text: "Nutrition", link: "#nutrition" },
+                { text: "Events", link: "#events" },
+              ],
+            },
+            {
+              title: "Support",
+              items: [
+                { text: "FAQs", link: "#faq" },
+                { text: "Contact", link: "#contact" },
+                { text: "Free Trial", link: "#trial" },
+              ],
+            },
+          ],
+          social: [
+            { platform: "instagram", link: "#", icon: "instagram" },
+            { platform: "facebook", link: "#", icon: "facebook" },
+            { platform: "youtube", link: "#", icon: "youtube" },
+          ],
+          copyright: "© 2024 IronBox CrossFit. All rights reserved.",
+        },
+      },
+    ],
+  },
 ];
 
 export function getTemplateById(id: string): LandingPageTemplate | undefined {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SubPage, ComponentConfig, SEOConfig } from "@/types/landing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SEOEditor from "@/components/editor/editors/fields/SEOEditor";
+import { validateOpenGraphImages } from "@/lib/field-validators";
 
 interface SubPageFormDialogProps {
   open: boolean;
@@ -81,6 +82,13 @@ export default function SubPageFormDialog({
     );
   }, [open, subPageToEdit]);
 
+  // Recomputed live from seoConfig — see docs/editor-input-validation-plan.md.
+  const ogImageErrors = useMemo(
+    () => validateOpenGraphImages(seoConfig.openGraph?.images),
+    [seoConfig.openGraph?.images]
+  );
+  const hasOgImageErrors = Object.keys(ogImageErrors).length > 0;
+
   const handleTitleChange = (newTitle: string) => {
     // Only auto-derive the slug from the title while it hasn't been manually
     // customized — otherwise editing a title would silently rewrite an
@@ -96,7 +104,7 @@ export default function SubPageFormDialog({
   };
 
   const handleSave = () => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim() || hasOgImageErrors) return;
 
     // onSave can update the currently-active EditableLandingPage's `page`
     // prop (e.g. when editing the sub-page currently open in the canvas),
@@ -212,7 +220,7 @@ export default function SubPageFormDialog({
           </TabsContent>
 
           <TabsContent value="seo" className="mt-4">
-            <SEOEditor config={seoConfig} onChange={setSeoConfig} />
+            <SEOEditor config={seoConfig} onChange={setSeoConfig} ogImageErrors={ogImageErrors} />
           </TabsContent>
         </Tabs>
 
@@ -220,7 +228,7 @@ export default function SubPageFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button onClick={handleSave} disabled={!formData.title.trim()}>
+          <Button onClick={handleSave} disabled={!formData.title.trim() || hasOgImageErrors}>
             {subPageToEdit ? "Cập nhật" : "Tạo"}
           </Button>
         </SheetFooter>

@@ -21,14 +21,7 @@ export type ComponentType =
   | "contact"
   | "content"
   | "newsletter"
-  | "video"
-  | "gym-hero"
-  | "gym-services"
-  | "gym-pricing"
-  | "gym-testimonials"
-  | "gym-navigation"
-  | "gym-about"
-  | "gym-contact";
+  | "video";
 
 /**
  * Background configuration for components
@@ -870,13 +863,6 @@ export function isValidComponentType(type: string): type is ComponentType {
     "testimonials",
     "cta",
     "footer",
-    "gym-hero",
-    "gym-services",
-    "gym-pricing",
-    "gym-testimonials",
-    "gym-navigation",
-    "gym-about",
-    "gym-contact",
   ];
   return validTypes.includes(type as ComponentType);
 }
