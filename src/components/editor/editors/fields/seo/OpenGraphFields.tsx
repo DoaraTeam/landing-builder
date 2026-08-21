@@ -13,15 +13,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { SEOConfig, OpenGraphConfig } from "@/types/landing";
+import { FieldError } from "@/components/editor/editors/fields/FieldError";
+import { cn } from "@/lib/utils";
 
 interface OpenGraphFieldsProps {
   config: SEOConfig;
   onChange: (updates: Partial<SEOConfig>) => void;
   disabled?: boolean;
+  // Keyed by image index — only width/height are validated (see
+  // docs/editor-input-validation-plan.md), everything else here is
+  // content/format the user is trusted to get right themselves.
+  imageErrors?: Record<number, { width?: string; height?: string }>;
 }
 
 /** The "Open Graph" tab's fields — extracted verbatim from SEOEditor.tsx. */
-export function OpenGraphFields({ config, onChange, disabled = false }: OpenGraphFieldsProps) {
+export function OpenGraphFields({
+  config,
+  onChange,
+  disabled = false,
+  imageErrors,
+}: OpenGraphFieldsProps) {
   return (
     <>
       <div className="space-y-2">
@@ -196,32 +207,51 @@ export function OpenGraphFields({ config, onChange, disabled = false }: OpenGrap
               disabled={disabled}
             />
             <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                value={image.width || ""}
-                onChange={(e) => {
-                  const images = [...(config.openGraph?.images || [])];
-                  images[index] = { ...images[index], width: parseInt(e.target.value) };
-                  onChange({
-                    openGraph: { ...config.openGraph, images },
-                  });
-                }}
-                placeholder="Width"
-                disabled={disabled}
-              />
-              <Input
-                type="number"
-                value={image.height || ""}
-                onChange={(e) => {
-                  const images = [...(config.openGraph?.images || [])];
-                  images[index] = { ...images[index], height: parseInt(e.target.value) };
-                  onChange({
-                    openGraph: { ...config.openGraph, images },
-                  });
-                }}
-                placeholder="Height"
-                disabled={disabled}
-              />
+              <div>
+                <Input
+                  type="number"
+                  value={image.width ?? ""}
+                  onChange={(e) => {
+                    // Empty means "no fixed width set", not an error —
+                    // only an actually-unparseable non-empty value should
+                    // ever reach validateOpenGraphImages as NaN.
+                    const raw = e.target.value;
+                    const images = [...(config.openGraph?.images || [])];
+                    images[index] = {
+                      ...images[index],
+                      width: raw === "" ? undefined : parseInt(raw),
+                    };
+                    onChange({
+                      openGraph: { ...config.openGraph, images },
+                    });
+                  }}
+                  placeholder="Width"
+                  disabled={disabled}
+                  className={cn(imageErrors?.[index]?.width && "border-red-500")}
+                />
+                <FieldError message={imageErrors?.[index]?.width} />
+              </div>
+              <div>
+                <Input
+                  type="number"
+                  value={image.height ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const images = [...(config.openGraph?.images || [])];
+                    images[index] = {
+                      ...images[index],
+                      height: raw === "" ? undefined : parseInt(raw),
+                    };
+                    onChange({
+                      openGraph: { ...config.openGraph, images },
+                    });
+                  }}
+                  placeholder="Height"
+                  disabled={disabled}
+                  className={cn(imageErrors?.[index]?.height && "border-red-500")}
+                />
+                <FieldError message={imageErrors?.[index]?.height} />
+              </div>
             </div>
           </div>
         ))}
