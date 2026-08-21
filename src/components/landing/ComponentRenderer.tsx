@@ -115,22 +115,6 @@ export function ComponentRenderer({ component, theme }: ComponentRendererProps) 
       componentElement = <Video config={config as never} theme={theme} />;
       break;
 
-    // Add more component types here as needed
-    case "gym-hero":
-    case "gym-services":
-    case "gym-pricing":
-    case "gym-testimonials":
-    case "gym-navigation":
-    case "gym-about":
-    case "gym-contact":
-      // TODO: Implement gym-specific components
-      componentElement = (
-        <div className="py-20 px-4 text-center bg-gray-100">
-          <p className="text-gray-500">Component type &quot;{type}&quot; not yet implemented</p>
-        </div>
-      );
-      break;
-
     default:
       console.warn(`Unknown component type: ${type}`);
       componentElement = (
