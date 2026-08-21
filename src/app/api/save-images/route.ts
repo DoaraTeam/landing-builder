@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { put } from "@vercel/blob";
 
 /**
  * POST /api/save-images
- * Convert base64 images to permanent files
+ * Convert base64 images to permanent files on Vercel Blob
  * Body: { images: Array<{ url: string, filename?: string }> }
  */
 export async function POST(request: NextRequest) {
@@ -14,13 +12,6 @@ export async function POST(request: NextRequest) {
 
     if (!Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: "No images provided" }, { status: 400 });
-    }
-
-    const uploadDir = join(process.cwd(), "public/assets/images");
-
-    // Ensure upload directory exists
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
     }
 
     // Process all images in parallel for better performance
@@ -41,6 +32,7 @@ export async function POST(request: NextRequest) {
             return null;
           }
 
+          const contentType = matches[1];
           const base64Data = matches[2];
           const buffer = Buffer.from(base64Data, "base64");
 
@@ -49,16 +41,15 @@ export async function POST(request: NextRequest) {
           const random = Math.random().toString(36).substring(2, 9);
           const finalFilename = filename || `image-${timestamp}-${random}.jpg`;
 
-          // Write file
-          const filepath = join(uploadDir, finalFilename);
-          await writeFile(filepath, buffer);
-
-          // Generate public URL
-          const publicUrl = `/assets/images/${finalFilename}`;
+          const blob = await put(finalFilename, buffer, {
+            access: "public",
+            contentType,
+            addRandomSuffix: true,
+          });
 
           return {
             originalUrl: url,
-            newUrl: publicUrl,
+            newUrl: blob.url,
           };
         } catch (error) {
           console.error("Error saving individual image:", error);

@@ -1,5 +1,3 @@
-import { readFile, writeFile, stat } from "fs/promises";
-import { join } from "path";
 import type {
   LandingConfig,
   LandingPage,
@@ -9,8 +7,8 @@ import type {
   Theme,
 } from "@/types/landing";
 
-const CONFIG_PATH = join(process.cwd(), "public/data/landing-config.json");
-const VERSIONS_PATH = join(process.cwd(), "public/data/landing-config.versions.json");
+const CONFIG_KEY = "landing-config";
+const VERSIONS_KEY = "landing-config-versions";
 
 // Version history entries are full page-tree snapshots (no diffing), so an
 // unbounded history grows the versions file — and every read of it —
@@ -140,43 +138,44 @@ export function deletePage(config: LandingConfig, pageId: string): LandingConfig
   return { ...config, pages };
 }
 
-// Every request to a public route (/[slug], /[slug]/[subpage], /preview)
-// used to readFile + JSON.parse the whole config from scratch —
-// some of them multiple times per request (generateMetadata + the page body
-// each reading it independently). That's real, avoidable work on every hit.
-// This cross-request, mtime-checked cache means repeat calls (whether from
-// the same request or a later one) skip straight back to the parsed object
-// as long as no save/publish has touched the file since.
-let baseCache: { mtimeMs: number; config: LandingConfig } | null = null;
+// The @/lib/redis import is dynamic (not a static top-level import) so that
+// importing this module's pure functions — which is all
+// landing-config-store.test.ts does — never pulls in @upstash/redis. That
+// package ships an ESM-only dependency (uncrypto) that Jest's default
+// transform can't parse; a static import would break the pure-function
+// tests just by loading the module, even though they never call these I/O
+// functions.
 
-/** Reads landing-config.json (every page's draft/published — no version history). */
+/** Reads the config (every page's draft/published — no version history)
+ * from Redis. No local cache: each serverless invocation is a fresh
+ * process, so an in-memory cache never survives long enough to pay for
+ * itself the way it did with a shared local file. */
 export async function readBaseLandingConfig(): Promise<LandingConfig> {
-  const stats = await stat(CONFIG_PATH);
-  if (baseCache && baseCache.mtimeMs === stats.mtimeMs) {
-    return baseCache.config;
+  const { redis } = await import("@/lib/redis");
+  const config = await redis.get<LandingConfig>(CONFIG_KEY);
+  if (!config) {
+    throw new Error(`Landing config not found in Redis under key "${CONFIG_KEY}"`);
   }
-
-  const raw = await readFile(CONFIG_PATH, "utf-8");
-  const config: LandingConfig = JSON.parse(raw);
-  baseCache = { mtimeMs: stats.mtimeMs, config };
   return config;
 }
 
-/** Persists landing-config.json and invalidates the read cache. */
+/** Persists the config to Redis. */
 export async function writeBaseLandingConfig(config: LandingConfig): Promise<void> {
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-  baseCache = null;
+  const { redis } = await import("@/lib/redis");
+  await redis.set(CONFIG_KEY, config);
 }
 
 type VersionsFile = Record<string, LandingPageVersion[]>;
 
 async function readVersionsFile(): Promise<VersionsFile> {
-  const raw = await readFile(VERSIONS_PATH, "utf-8");
-  return JSON.parse(raw) as VersionsFile;
+  const { redis } = await import("@/lib/redis");
+  const file = await redis.get<VersionsFile>(VERSIONS_KEY);
+  return file ?? {};
 }
 
 async function writeVersionsFile(file: VersionsFile): Promise<void> {
-  await writeFile(VERSIONS_PATH, JSON.stringify(file, null, 2), "utf-8");
+  const { redis } = await import("@/lib/redis");
+  await redis.set(VERSIONS_KEY, file);
 }
 
 /** Lazy — only ever called when the editor's History sidebar is opened for this page. */
